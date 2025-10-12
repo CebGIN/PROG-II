@@ -6,7 +6,7 @@
 // Esta es la función que procesa todos los mensajes de la ventana.
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
-        case WM_CUT :
+        case WM_LBUTTONDOWN :
             std::cout<<"Hola";
             break;
         case WM_CLOSE: // Se cierra la ventana (p.ej., el usuario hizo clic en la 'X')

@@ -1,6 +1,7 @@
 #include <functional>
 #include <windows.h>
 #include <iostream>
+#include <tchar.h>
 #include <vector>
 #include <memory>
 #include <string>
@@ -10,7 +11,7 @@ namespace Input{
     HANDLE hStdin = INVALID_HANDLE_VALUE;
     HANDLE hStdout = INVALID_HANDLE_VALUE;
     
-    COORD MousePos  = {0, 0};
+    POINT MousePos  = {0, 0};
     bool LClick = false;
     bool RClick = false;
     bool LClickPrev = false;
@@ -63,7 +64,7 @@ namespace Input{
                 if (rec.EventType == MOUSE_EVENT) {
                     MOUSE_EVENT_RECORD &mouseRec = rec.Event.MouseEvent;
                     if (mouseRec.dwEventFlags == MOUSE_MOVED) {
-                        Input::MousePos = mouseRec.dwMousePosition;
+                        // Input::MousePos = mouseRec.dwMousePosition;
                     }
                 }
             }
@@ -119,66 +120,66 @@ namespace Color {
     
 };
 
-COORD addCoords(COORD A, COORD B){
-    return {static_cast<SHORT>(A.X + B.X), static_cast<SHORT>(A.Y + B.Y)};
+POINT addCoords(POINT A, POINT B){
+    return {(A.x + B.x), (A.y + B.y)};
 }
-COORD subtractCoords(COORD A, COORD B){
-    return {static_cast<SHORT>(A.X - B.X), static_cast<SHORT>(A.Y - B.Y)};
+POINT subtractCoords(POINT A, POINT B){
+    return {(A.x - B.x), (A.y - B.y)};
 }
 
-class ConsoleRenderer {
-private:
-    COORD consoleBufferSize;
-    std::vector<CHAR_INFO> screenBuffer; // El búfer de caracteres y atributos
-
-public:
-    ConsoleRenderer(COORD bufferSize) : consoleBufferSize(bufferSize) {
-        screenBuffer.resize(bufferSize.X * bufferSize.Y);
-        clearBuffer(); // Inicializar con espacios en blanco
-    }
-    // Limpia el búfer con espacios y atributos por defecto
-    void clearBuffer() {
-        CHAR_INFO emptyCharInfo;
-        emptyCharInfo.Char.UnicodeChar = L' '; // Usar L' ' para wchar_t
-        emptyCharInfo.Attributes = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; // Blanco por defecto
-
-        for (size_t i = 0; i < screenBuffer.size(); ++i) {
-            screenBuffer[i] = emptyCharInfo;
-        }
-    }
-
-    void putChar(COORD pos, WCHAR character, WORD attributes) {
-        // Asegurarse de que la posición esté dentro de los límites del búfer
-        if (pos.X >= 0 && pos.X < consoleBufferSize.X &&
-            pos.Y >= 0 && pos.Y < consoleBufferSize.Y) {
-            
-            // Calcular el índice lineal en el vector
-            int index = pos.Y * consoleBufferSize.X + pos.X;
-            screenBuffer[index].Char.UnicodeChar = character;
-            screenBuffer[index].Attributes = attributes;
-        }
-    }
-    
-    void putString(COORD pos, const std::string& text, WORD attributes) {
-        for (size_t i = 0; i < text.length(); ++i) {
-            putChar(addCoords(pos, {static_cast<SHORT>(i), 0}), static_cast<WCHAR>(text[i]), attributes);
-        }
-    }
-
-    void present() {
-        SMALL_RECT writeRegion = {0, 0, static_cast<SHORT>(consoleBufferSize.X - 1), static_cast<SHORT>(consoleBufferSize.Y - 1)};
-
-        if (!WriteConsoleOutput(
-            Input::hStdout,     // Handle al búfer de pantalla
-            screenBuffer.data(),// Puntero al primer elemento del array CHAR_INFO
-            consoleBufferSize,  // Tamaño del búfer de CHAR_INFO (ancho x alto)
-            {0,0},              // Coordenada de la celda superior izquierda en el búfer
-            &writeRegion        // Región del destino en el búfer de pantalla
-        )) {
-            std::cerr << "Error writing to console output: " << GetLastError() << std::endl;
-        }
-    }
-};
+// class ConsoleRenderer {
+// private:
+//     POINT consoleBufferSize;
+//     std::vector<CHAR_INFO> screenBuffer; // El búfer de caracteres y atributos
+//
+// public:
+//     ConsoleRenderer(POINT bufferSize) : consoleBufferSize(bufferSize) {
+//         screenBuffer.resize(bufferSize.x * bufferSize.y);
+//         clearBuffer(); // Inicializar con espacios en blanco
+//     }
+//     // Limpia el búfer con espacios y atributos por defecto
+//     void clearBuffer() {
+//         CHAR_INFO emptyCharInfo;
+//         emptyCharInfo.Char.UnicodeChar = L' '; // Usar L' ' para wchar_t
+//         emptyCharInfo.Attributes = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; // Blanco por defecto
+//
+//         for (size_t i = 0; i < screenBuffer.size(); ++i) {
+//             screenBuffer[i] = emptyCharInfo;
+//         }
+//     }
+//
+//     void putChar(POINT pos, WCHAR character, WORD attributes) {
+//         // Asegurarse de que la posición esté dentro de los límites del búfer
+//         if (pos.x >= 0 && pos.x < consoleBufferSize.x &&
+//             pos.y >= 0 && pos.y < consoleBufferSize.y) {
+//            
+//             // Calcular el índice lineal en el vector
+//             int index = pos.y * consoleBufferSize.x + pos.x;
+//             screenBuffer[index].Char.UnicodeChar = character;
+//             screenBuffer[index].Attributes = attributes;
+//         }
+//     }
+//    
+//     void putString(POINT pos, const std::string& text, WORD attributes) {
+//         for (size_t i = 0; i < text.length(); ++i) {
+//             putChar(addCoords(pos, {static_cast<SHORT>(i), 0}), static_cast<WCHAR>(text[i]), attributes);
+//         }
+//     }
+//
+//     void present() {
+//         SMALL_RECT writeRegion = {0, 0, static_cast<SHORT>(consoleBufferSize.x - 1), static_cast<SHORT>(consoleBufferSize.y - 1)};
+//
+//         if (!WriteConsoleOutput(
+//             Input::hStdout,     // Handle al búfer de pantalla
+//             screenBuffer.data(),// Puntero al primer elemento del array CHAR_INFO
+//             consoleBufferSize,  // Tamaño del búfer de CHAR_INFO (ancho x alto)
+//             {0,0},              // Coordenada de la celda superior izquierda en el búfer
+//             &writeRegion        // Región del destino en el búfer de pantalla
+//         )) {
+//             std::cerr << "Error writing to console output: " << GetLastError() << std::endl;
+//         }
+//     }
+// };
 
 class Node : public std::enable_shared_from_this<Node>{
 protected:
@@ -186,6 +187,7 @@ protected:
     std::weak_ptr<Node> Parent;
     std::string name;
     std::function<void()> process;
+    // std::function<void()> at_draw;
 
 public:
     Node(const std::string& nodeName = "Unnamed Node") : name(nodeName) {
@@ -214,9 +216,9 @@ public:
             Childs.push_back(childNode);
             childNode->setParent(shared_from_this());
         } 
-        // else {
-        //     std::cerr << "Warning: Attempted to add a null shared_ptr child node." << std::endl;
-        // }
+        else {
+            std::cerr << "Warning: Attempted to add a null shared_ptr child node." << std::endl;
+        }
     }
 
     size_t getChildCount() const {
@@ -294,26 +296,26 @@ public:
 
 class Node2D : public Node{
 protected:
-    COORD position;
+    POINT position;
     public:
     
-    Node2D(const std::string& nodeName = "Unnamed Node", COORD nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
+    Node2D(const std::string& nodeName = "Unnamed Node", POINT nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
 
 
-    COORD getLocalPosition() const {
+    POINT getLocalPosition() const {
         return position;
     }
-    void setLocalPosition(COORD new_position){
+    void setLocalPosition(POINT new_position){
         position = new_position;
-        std::cout << "Node2D '" << name << "' local position set to (" << position.X << ", " << position.Y << ")." << std::endl;
+        // std::cout << "Node2D '" << name << "' local position set to (" << position.X << ", " << position.Y << ")." << std::endl;
     }
 
     std::string getType() const override {
         return "Node2D";
     }
 
-    COORD getGlobalPosition() const {
-        COORD globalPos = position;
+    POINT getGlobalPosition() const {
+        POINT globalPos = position;
 
         std::shared_ptr<Node> currentParent = getParent(); 
         while (currentParent) {
@@ -326,36 +328,36 @@ protected:
         return globalPos;
     }
     
-    void setGlobalPosition(COORD newGlobalPosition) {
-        COORD currentGlobalPosition = getGlobalPosition(); // G
-        COORD currentLocalPosition = getLocalPosition();   // L
+    void setGlobalPosition(POINT newGlobalPosition) {
+        POINT currentGlobalPosition = getGlobalPosition(); // G
+        POINT currentLocalPosition = getLocalPosition();   // L
 
-        COORD newLocalPosition = addCoords(newGlobalPosition, currentLocalPosition); // Gn + L
+        POINT newLocalPosition = addCoords(newGlobalPosition, currentLocalPosition); // Gn + L
         newLocalPosition = subtractCoords(newLocalPosition, currentGlobalPosition);  // (Gn + L) - G
 
         setLocalPosition(newLocalPosition);
-        std::cout << "Node2D '" << name << "' global position set to ("
-                  << newGlobalPosition.X << ", " << newGlobalPosition.Y << ")"
-                  << " (New Local: " << newLocalPosition.X << ", " << newLocalPosition.Y << ")." << std::endl;
+        // std::cout << "Node2D '" << name << "' global position set to ("
+        //           << newGlobalPosition.X << ", " << newGlobalPosition.Y << ")"
+        //           << " (New Local: " << newLocalPosition.X << ", " << newLocalPosition.Y << ")." << std::endl;
     }
 };
 
 class NodeUI : public Node2D{
 protected:
-    COORD size;
+    POINT size;
     std::vector<std::string> text;
     
 public: 
 
-    NodeUI(const std::string& nodeName, COORD nodePosition, std::vector<std::string> nodeText) :
+    NodeUI(const std::string& nodeName, POINT nodePosition, std::vector<std::string> nodeText) :
         Node2D(nodeName, nodePosition), text(nodeText)
     {
         if (!text.empty()) {
-            size.X = static_cast<SHORT>(text[0].size());
-            size.Y = static_cast<SHORT>(text.size());
+            size.x = static_cast<LONG>(text[0].size());
+            size.y = static_cast<LONG>(text.size());
         } else {
-            size.X = 0;
-            size.Y = 0;
+            size.x = 0;
+            size.y = 0;
             // std::cerr << "Warning: NodeUI '" << nodeName << "' created with empty text." << std::endl;
         }
     }
@@ -363,11 +365,11 @@ public:
     void set_text(std::vector<std::string> NewText){
         text = NewText;
         if (!text.empty()) {
-            size.X = static_cast<SHORT>(text[0].size());
-            size.Y = static_cast<SHORT>(text.size());
+            size.x = static_cast<LONG>(text[0].size());
+            size.y = static_cast<LONG>(text.size());
         } else {
-            size.X = 0;
-            size.Y = 0;
+            size.x = 0;
+            size.y = 0;
         }
     }
 
@@ -375,25 +377,25 @@ public:
         return "NodeUI";
     }
 
-    bool is_inside(const COORD point){
-        COORD globalPos = getGlobalPosition(); 
-        return (point.X >= globalPos.X && point.X < globalPos.X + size.X &&
-                point.Y >= globalPos.Y && point.Y < globalPos.Y + size.Y);
+    bool is_inside(const POINT point){
+        POINT globalPos = getGlobalPosition(); 
+        return (point.x >= globalPos.x && point.x < globalPos.x + size.x &&
+                point.y >= globalPos.y && point.y < globalPos.y + size.y);
     }
 
     void draw(ConsoleRenderer& renderer) override {
-        COORD globalPos = getGlobalPosition();
+        POINT globalPos = getGlobalPosition();
         WORD defaultAttributes = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; // White
 
-        for (SHORT y_offset = 0; y_offset < static_cast<SHORT>(text.size()); ++y_offset) {
-            COORD currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
+        for (LONG y_offset = 0; y_offset < static_cast<LONG>(text.size()); ++y_offset) {
+            POINT currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
             std::string line = text[y_offset];
             renderer.putString(currentLineGlobalPos, line, defaultAttributes);
         }
         Node::draw(renderer);
     }
     
-    COORD getSize() const { return size; }
+    POINT getSize() const { return size; }
 };
 
 class NodePCT : public NodeUI{
@@ -402,7 +404,7 @@ protected:
     WORD background_attributes;
 
 public: 
-    NodePCT(const std::string& nodeName, COORD nodePosition, 
+    NodePCT(const std::string& nodeName, POINT nodePosition, 
             const std::string& textColorName, const std::string& backgroundColorName, 
             std::vector<std::string> nodeText) : NodeUI(nodeName, nodePosition, nodeText), 
             text_attributes(Color::getColorAttribute(textColorName)), background_attributes(Color::getBackgroundColorAttribute(backgroundColorName)) {}
@@ -412,11 +414,11 @@ public:
     }
 
    void draw(ConsoleRenderer& renderer) override {
-        COORD globalPos = getGlobalPosition();
+        POINT globalPos = getGlobalPosition();
         WORD combinedAttributes = text_attributes | background_attributes;
 
-        for (SHORT y_offset = 0; y_offset < static_cast<SHORT>(text.size()); ++y_offset) {
-            COORD currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
+        for (LONG y_offset = 0; y_offset < static_cast<LONG>(text.size()); ++y_offset) {
+            POINT currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
             std::string line = text[y_offset];
             renderer.putString(currentLineGlobalPos, line, combinedAttributes);
         }
@@ -438,7 +440,7 @@ public:
         handleClick();
         Node::update(); 
     }
-    NodeButton(const std::string& nodeName, COORD nodePosition, std::string textColor, std::string backgroundColor, std::vector<std::string> nodeText) : 
+    NodeButton(const std::string& nodeName, POINT nodePosition, std::string textColor, std::string backgroundColor, std::vector<std::string> nodeText) : 
         NodePCT(nodeName, nodePosition, textColor, backgroundColor, nodeText) {}
 
     std::string getType() const override {
@@ -447,7 +449,7 @@ public:
     bool is_hovered(){
         return hovered;
     }
-    void updateHover(const COORD mouseGlobalPos) {
+    void updateHover(const POINT mouseGlobalPos) {
         hovered = is_inside(mouseGlobalPos);
     }
     void handleClick() { if (Input::LClickJustPressed && hovered && onClick) onClick(); }
@@ -457,7 +459,7 @@ public:
     }
 
     void draw(ConsoleRenderer& renderer) override {
-        COORD globalPos = getGlobalPosition();
+        POINT globalPos = getGlobalPosition();
         WORD currentTextAttrs = text_attributes;
         WORD currentBgAttrs = background_attributes;
 
@@ -468,8 +470,8 @@ public:
 
         WORD combinedAttributes = currentTextAttrs | currentBgAttrs;
 
-        for (SHORT y_offset = 0; y_offset < static_cast<SHORT>(text.size()); ++y_offset) {
-            COORD currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
+        for (LONG y_offset = 0; y_offset < (text.size()); ++y_offset) {
+            POINT currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
             std::string line = text[y_offset];
             
             renderer.putString(currentLineGlobalPos, line, combinedAttributes);
@@ -477,5 +479,98 @@ public:
         Node::draw(renderer);
     }
 };
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_LBUTTONDOWN :
+            // std::cout<<"Hola";
+            break;
+
+        case WM_CHAR :
+            break;
+
+        case WM_PAINT :
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+
+            // All painting occurs here, between BeginPaint and EndPaint.
+            FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
+
+            EndPaint(hwnd, &ps);
+            break;
+
+        case WM_CLOSE: // Se cierra la ventana (p.ej., el usuario hizo clic en la 'X')
+            DestroyWindow(hwnd);
+            break;
+
+        case WM_DESTROY: // La ventana ha sido destruida
+            PostQuitMessage(0); // Envía un mensaje WM_QUIT a la cola de mensajes
+            break;
+
+        default:
+            // Para todos los demás mensajes que no manejamos,
+            // los pasamos a la función de procedimiento de ventana predeterminada.
+            return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+    return 0;
+}
+
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    const TCHAR CLASS_NAME[] = _T("MiClaseVentana");
+
+    // ==========================================================
+    // PARTE A: REGISTRAR LA CLASE DE VENTANA
+    // ==========================================================
+    WNDCLASSEX wc = {};
+    wc.cbSize = sizeof(WNDCLASSEX);                // Tamaño de la estructura
+    wc.lpfnWndProc = WndProc;                      // Puntero a la función de manejo de mensajes
+    wc.hInstance = hInstance;                      // Identificador de la instancia de la aplicación
+    wc.lpszClassName = CLASS_NAME;                 // Nombre de la clase (usado al crear la ventana)
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);      // Cursor por defecto (flecha)
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1); // Color de fondo (blanco/gris claro)
+
+    if (!RegisterClassEx(&wc)) {
+        MessageBox(NULL, _T("El registro de la clase falló."), _T("Error"), MB_ICONERROR);
+        return 0;
+    }
+
+    // ==========================================================
+    // PARTE B: CREAR LA VENTANA (Instancia)
+    // ==========================================================
+    
+    HWND hwnd = CreateWindowEx(
+        0,                                 // Estilos de ventana extendidos
+        CLASS_NAME,                        // Nombre de la Clase (el que registramos)
+        _T("HolaWindows"),      // Título de la ventana
+        WS_OVERLAPPEDWINDOW,               // Estilo de ventana (borde, barra de título, minimizar/maximizar)
+        CW_USEDEFAULT, CW_USEDEFAULT,      // Posición inicial (X, Y)
+        500, 350,                          // Tamaño (Ancho, Alto)
+        NULL,                              // Ventana Padre (NULL para la principal)
+        NULL,                              // Menú (NULL, no hay menú)
+        hInstance,                         // Identificador de la instancia de la aplicación
+        NULL                               // Datos de creación adicionales
+    );
+
+    if (hwnd == NULL) {
+        MessageBox(NULL, _T("La creación de la ventana falló."), _T("Error"), MB_ICONERROR);
+        return 0;
+    }
+
+    // Mostrar y actualizar la ventana
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+
+    // ==========================================================
+    // PARTE C: EL BUCLE DE MENSAJES (Message Loop)
+    // ==========================================================
+    MSG msg = {};
+    while (GetMessage(&msg, NULL, 0, 0) > 0) {
+        TranslateMessage(&msg); // Traduce mensajes de teclado a caracteres
+        DispatchMessage(&msg);  // Envía el mensaje a la función WndProc
+    }
+    
+    return (int)msg.wParam;
+}
 
 //FIN DEL CODIGO DEL MOTOR
