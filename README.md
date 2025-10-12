@@ -3,16 +3,16 @@
 
 ### Contenidos por clase:
 
-1. **Clase 1 - Manejo de Archivos**:
-   - Lectura y escritura de archivos de texto.
-   - Uso de `fstream` para operaciones de entrada y salida.
-   - Ejercicios prácticos con archivos.
-   
-2. **Clase 2 - Punteros y Memoria Dinámica**:
+1. **Clase 1 - Punteros y Memoria Dinámica**:
    - Conceptos fundamentales de punteros.
    - Operadores de memoria dinámica (`new` y `delete`).
    - Paso por referencia y manipulación de memoria.
    - Gestión eficiente de recursos.
+   
+2. **Clase 2 - Manejo de Archivos**:
+   - Lectura y escritura de archivos de texto.
+   - Uso de `fstream` para operaciones de entrada y salida.
+   - Ejercicios prácticos con archivos.
 
 3. **Clase 3 - Archivos Binarios**:
    - Escritura y lectura de archivos binarios.
