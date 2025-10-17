@@ -6,6 +6,9 @@
 #include <vector>
 #include <string>
 
+inline POINT const operator+(POINT a, POINT b){return {a.x + b.x, a.y + b.y};}
+inline POINT const operator-(POINT a, POINT b){return {a.x - b.x, a.y - b.y};}
+
 class Node : public std::enable_shared_from_this<Node>{
     protected:
         std::vector<std::shared_ptr<Node>> Childs;
@@ -138,16 +141,16 @@ class Node : public std::enable_shared_from_this<Node>{
     
     class Node2D : public Node{
     protected:
-        COORD position;
+        POINT position;
         public:
         
-        Node2D(const std::string& nodeName = "Unnamed Node", COORD nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
+        Node2D(const std::string& nodeName = "Unnamed Node", POINT nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
     
     
-        COORD getLocalPosition() const {
+        POINT getLocalPosition() const {
             return position;
         }
-        void setLocalPosition(COORD new_position){
+        void setLocalPosition(POINT new_position){
             position = new_position;
             // std::cout << "Node2D '" << name << "' local position set to (" << position.X << ", " << position.Y << ")." << std::endl;
         }
@@ -156,26 +159,26 @@ class Node : public std::enable_shared_from_this<Node>{
             return "Node2D";
         }
     
-        COORD getGlobalPosition() const {
-            COORD globalPos = position;
+        POINT getGlobalPosition() const {
+            POINT globalPos = position;
     
             std::shared_ptr<Node> currentParent = getParent(); 
             while (currentParent) {
                 std::shared_ptr<Node2D> parent2D = std::dynamic_pointer_cast<Node2D>(currentParent);
                 if (parent2D) {
-                    globalPos = addCoords(parent2D->position, globalPos);
+                    globalPos = (parent2D->position) + globalPos;
                 }
                 currentParent = currentParent->getParent();
             }
             return globalPos;
         }
         
-        void setGlobalPosition(COORD newGlobalPosition) {
-            COORD currentGlobalPosition = getGlobalPosition(); // G
-            COORD currentLocalPosition = getLocalPosition();   // L
+        void setGlobalPosition(POINT newGlobalPosition) {
+            POINT currentGlobalPosition = getGlobalPosition(); // G
+            POINT currentLocalPosition = getLocalPosition();   // L
     
-            COORD newLocalPosition = addCoords(newGlobalPosition, currentLocalPosition); // Gn + L
-            newLocalPosition = subtractCoords(newLocalPosition, currentGlobalPosition);  // (Gn + L) - G
+            // POINT newLocalPosition = (newGlobalPosition + currentLocalPosition); // Gn + L
+            POINT newLocalPosition = ((newGlobalPosition + currentLocalPosition) - currentGlobalPosition);  // (Gn + L) - G
     
             setLocalPosition(newLocalPosition);
             // std::cout << "Node2D '" << name << "' global position set to ("
