@@ -182,7 +182,7 @@ public:
 
 class Node : public std::enable_shared_from_this<Node>{
 protected:
-    std::vector<std::shared_ptr<Node>> Childs;
+    std::vector<std::shared_ptr<Node>> Children;
     std::weak_ptr<Node> Parent;
     std::string name;
     std::function<void()> process;
@@ -211,7 +211,7 @@ public:
 
     void addChild(std::shared_ptr<Node> childNode) {
         if (childNode) {
-            Childs.push_back(childNode);
+            Children.push_back(childNode);
             childNode->setParent(shared_from_this());
         } 
         // else {
@@ -220,30 +220,30 @@ public:
     }
 
     size_t getChildCount() const {
-        return Childs.size();
+        return Children.size();
     }
 
     std::shared_ptr<Node> getChild(size_t index) {
-        if (index < Childs.size()) {
-            return Childs[index];
+        if (index < Children.size()) {
+            return Children[index];
         } else {
             throw std::out_of_range("Node::getChild(index): Index out of bounds.");
         }
     }
 
     std::shared_ptr<const Node> getChild(size_t index) const {
-        if (index < Childs.size()) {
-            return Childs[index];
+        if (index < Children.size()) {
+            return Children[index];
         } else {
             throw std::out_of_range("Node::getChild(index): Index out of bounds.");
         }
     }
 
-    std::vector<std::shared_ptr<Node>>::iterator begin() { return Childs.begin();}
-    std::vector<std::shared_ptr<Node>>::iterator end() { return Childs.end();}
+    std::vector<std::shared_ptr<Node>>::iterator begin() { return Children.begin();}
+    std::vector<std::shared_ptr<Node>>::iterator end() { return Children.end();}
 
-    std::vector<std::shared_ptr<Node>>::const_iterator begin() const { return Childs.cbegin();} // Use cbegin for const access
-    std::vector<std::shared_ptr<Node>>::const_iterator end() const { return Childs.cend();}     // Use cend for const access
+    std::vector<std::shared_ptr<Node>>::const_iterator begin() const { return Children.cbegin();} // Use cbegin for const access
+    std::vector<std::shared_ptr<Node>>::const_iterator end() const { return Children.cend();}     // Use cend for const access
 
     const std::string& getName() const {
         return name;
@@ -258,7 +258,7 @@ public:
         process(); 
 
         // 2. Propagar la llamada a update a todos los hijos
-        for (const auto& child : Childs) {
+        for (const auto& child : Children) {
             child->update(); 
         }
     }
@@ -273,7 +273,7 @@ public:
     }
 
     virtual void draw(ConsoleRenderer& renderer) {
-    for (const auto& child : Childs) {
+    for (const auto& child : Children) {
         child->draw(renderer); // Propagar la llamada a draw a los hijos
     }
 }
@@ -286,7 +286,7 @@ public:
         }
         std::cout << std::endl;
 
-        for (const auto& child : Childs) {
+        for (const auto& child : Children) {
             child->printHierarchy(indentLevel + 1);
         }
     }
