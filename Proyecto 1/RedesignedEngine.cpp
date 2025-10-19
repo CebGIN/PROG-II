@@ -1,4 +1,5 @@
 #include <functional>
+#include <algorithm>
 #include <windows.h>
 #include <iostream>
 #include <tchar.h>
@@ -22,13 +23,16 @@ class Node : public std::enable_shared_from_this<Node>{
     
     public:
         Node(const std::string& nodeName = "Unnamed Node") : name(nodeName) {
-            // std::cout << "Node '" << name << "' created." << std::endl;
-            process = [](){ /* Do nothing by default */ };
+            process = [](){};
         }
         
-        virtual ~Node() {
-            // std::cout << "Node '" << name << "' destroyed." << std::endl;
-        }
+        std::vector<std::shared_ptr<Node>>::iterator begin() { return Children.begin();}
+        std::vector<std::shared_ptr<Node>>::iterator end() { return Children.end();}
+    
+        std::vector<std::shared_ptr<Node>>::const_iterator begin() const { return Children.cbegin();} // Use cbegin for const access
+        std::vector<std::shared_ptr<Node>>::const_iterator end() const { return Children.cend();}     // Use cend for const access
+
+        virtual ~Node() {}
         
         void setParent(std::shared_ptr<Node> parentNode) {
             Parent = parentNode;
@@ -38,6 +42,17 @@ class Node : public std::enable_shared_from_this<Node>{
             return Parent.lock();
         }
         
+        void removeChild(std::shared_ptr<Node> child) {
+            if (!child) return;
+
+            auto it = std::find(Children.begin(), Children.end(), child);
+            if (it != Children.end()) {
+                Children.erase(it);
+                child->Parent.reset();
+            }
+            // child->exitTree();
+        }
+
         bool isRoot() const {
             return Parent.expired() || !Parent.lock();
         }
@@ -72,12 +87,6 @@ class Node : public std::enable_shared_from_this<Node>{
             }
         }
     
-        std::vector<std::shared_ptr<Node>>::iterator begin() { return Children.begin();}
-        std::vector<std::shared_ptr<Node>>::iterator end() { return Children.end();}
-    
-        std::vector<std::shared_ptr<Node>>::const_iterator begin() const { return Children.cbegin();} // Use cbegin for const access
-        std::vector<std::shared_ptr<Node>>::const_iterator end() const { return Children.cend();}     // Use cend for const access
-    
         const std::string& getName() const {
             return name;
         }
@@ -95,6 +104,7 @@ class Node : public std::enable_shared_from_this<Node>{
                 child->update(); 
             }
         }
+
         virtual void enterTree() {
             // 1. Ejecutar la lógica de entrada de este nodo
             atEnterTree(); 
@@ -104,6 +114,7 @@ class Node : public std::enable_shared_from_this<Node>{
                 child->enterTree(); 
             }
         }
+
         virtual void exitTree() {
             // 1. Propagar la llamada a salir a todos los hijos
             for (const auto& child : Children) {
@@ -112,6 +123,7 @@ class Node : public std::enable_shared_from_this<Node>{
             // 2. Ejecutar la lógica de salida de este nodo
             atExitTree();
         }
+
         void setProcessFunction(std::function<void()> func) {
             if (func) {
                 process = func;
@@ -120,22 +132,10 @@ class Node : public std::enable_shared_from_this<Node>{
                 // std::cerr << "Warning: Attempted to set a null process function for Node '" << name << "'." << std::endl;
             }
         }
+
         virtual void invalidateCacheRecursively() const{
             for (const auto& child : Children) {
                 child->invalidateCacheRecursively();  
-            }
-        }
-
-        void printHierarchy(int indentLevel = 0) const {//debug
-            std::cout << std::string(indentLevel * 4, ' ');
-            std::cout << "- " << name << " (" << getType() << ")"; // Print node type
-            if (isRoot()) {
-                std::cout << " (Root)";
-            }
-            std::cout << std::endl;
-    
-            for (const auto& child : Children) {
-                child->printHierarchy(indentLevel + 1);
             }
         }
     };
@@ -200,5 +200,5 @@ class Node2D : public Node{
             this->cached_global_position = newGlobalPosition;
             this->is_cached_position_valid = true;
             // std::cout << "Node2D '" << name << "' global position set to (" << newGlobalPosition.X << ", " << newGlobalPosition.Y << ")" << " (New Local: " << newLocalPosition.X << ", " << newLocalPosition.Y << ")." << std::endl;
-        }
+        }  
 };
