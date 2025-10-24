@@ -12,6 +12,13 @@ inline POINT const operator-(POINT a, POINT b){return {a.x - b.x, a.y - b.y};}
 inline bool const operator==(POINT a, POINT b){return {(a.x == b.x)&&(a.y == b.y)};}
 inline bool const operator!=(POINT a, POINT b){return {(a.x != b.x)&&(a.y != b.y)};}
 
+LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+class Node;
+class Node2D;
+class NodeWin32;
+class SceneManager;
+
 class Node : public std::enable_shared_from_this<Node>{
     protected:
         std::vector<std::shared_ptr<Node>> Children;
@@ -129,8 +136,8 @@ class Node : public std::enable_shared_from_this<Node>{
 
         virtual void enterTree() {
             // 1. Ejecutar la lógica de entrada de este nodo
-            atEnterTree();
             its_in_the_tree = true;
+            atEnterTree();
             // 2. Propagar la llamada a   a todos los hijos
             for (const auto& child : Children) {
                 child->enterTree(); 
@@ -142,9 +149,9 @@ class Node : public std::enable_shared_from_this<Node>{
             for (const auto& child : Children) {
                 child->exitTree(); 
             }
-            its_in_the_tree = false;
             // 2. Ejecutar la lógica de salida de este nodo
             atExitTree();
+            its_in_the_tree = false;
         }
 
         void setProcessFunction(std::function<void()> func) {
@@ -162,7 +169,7 @@ class Node : public std::enable_shared_from_this<Node>{
             }
         }
     };
-    
+
 class Node2D : public Node{
     protected:
         POINT position;
@@ -171,7 +178,7 @@ class Node2D : public Node{
 
     public:
         Node2D(const std::string& nodeName = "Unnamed Node", POINT nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
-
+        
         std::shared_ptr<Node2D> getNode2DParent() const {
             std::shared_ptr<const Node> currentParent = getParent();
             while (currentParent){
@@ -244,12 +251,15 @@ public:
             this->hControl = NULL; 
         }
     }
+
     HWND getControlHandle(){
         return hControl;
     }   
 
     void invalidateCacheRecursively() const override {
         this->win32_needs_sync = true;
+        std::shared_ptr<NodeWin32> self = std::dynamic_pointer_cast<NodeWin32>(shared_from_this());
+        SceneManager::getInstance().registerDirtyNode(self);
         Node2D::invalidateCacheRecursively();
     }
 
@@ -260,7 +270,7 @@ public:
         }
         if (hControl == NULL) {
             auto win32Parent = getParentOfType<NodeWin32>();
-            HWND hParent = NULL;
+            HWND hParent = SceneManager::getInstance().getMainHWND();
             if(win32Parent){
                 hParent = win32Parent->getControlHandle();
             }
@@ -290,7 +300,7 @@ public:
         
         // Invalida el flag de sincronización Win32 para forzar un SetWindowPos
         this->win32_needs_sync = true; 
-        
+
         // Opcional: Invalidar el cache de posición C++
         // invalidateCacheRecursively(); 
     }
@@ -320,3 +330,127 @@ public:
         this->win32_needs_sync = false;
     }
 };
+
+class SceneManager {
+    private:
+        std::vector<std::weak_ptr<NodeWin32>> dirty_win32_nodes;
+        std::shared_ptr<Node> root_node = nullptr; 
+        
+        HWND hMainWnd = NULL; 
+        bool is_running = false; 
+        SceneManager() = default;
+        
+    public:
+        static SceneManager& getInstance(){
+            static SceneManager instance;
+            return instance;
+        }
+        // Método para obtener el HWND de la ventana principal (utilizado por NodeWin32)
+        HWND getMainHWND() const {
+             return hMainWnd; 
+        }
+    
+        void registerDirtyNode(std::shared_ptr<NodeWin32> node) {
+            dirty_win32_nodes.push_back(node); 
+        }
+    
+        void processScene() {
+            if (!root_node) return;
+            root_node->update();
+            for (const std::weak_ptr<NodeWin32>& weakNode : dirty_win32_nodes) {
+                if (std::shared_ptr<NodeWin32> node = weakNode.lock()) {
+                    node->synchronizeWin32Control();
+                }
+            }
+            dirty_win32_nodes.clear();
+        }
+    
+        void changeScene(std::shared_ptr<Node> newRoot) {
+            if (newRoot == root_node) return;
+    
+            if (root_node) {
+                root_node->exitTree();
+            }
+    
+            root_node = newRoot;
+    
+            if (root_node) { 
+                root_node->enterTree();
+            }
+        }
+    
+        void startRunning(HINSTANCE hInstance, int nCmdShow) {
+            const TCHAR* className = TEXT("NodeEngineApp");
+            
+            // Inicialización de la ventana
+            if (!initializeMainWindow(hInstance, nCmdShow, className, TEXT("Node Engine Demo"), 800, 600)) {
+                std::cerr << "Engine Initialization Failed." << std::endl;
+                return;
+            }
+    
+            this->is_running = true;
+            
+            MSG msg = {};
+            
+            // Bucle de Mensajes
+            while (this->is_running && GetMessage(&msg, NULL, 0, 0)) {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+                
+                // Llamada a la Lógica de Escena y Sincronización
+                // (Se ejecuta cuando no hay mensajes bloqueantes)
+                if (this->root_node) {
+                    this->processScene();
+                }
+            }
+        }
+    
+        void stopRunning() {
+            this->is_running = false;
+        }
+    
+        // Método de inicialización
+        bool initializeMainWindow(HINSTANCE hInstance, int nCmdShow, const TCHAR* className, const TCHAR* title, int width, int height) {
+        // 1. Registro de la Clase de Ventana
+        WNDCLASSEX wcex = {};
+        wcex.cbSize        = sizeof(WNDCLASSEX);
+        wcex.style         = CS_HREDRAW | CS_VREDRAW;
+        wcex.lpfnWndProc   = GlobalWindowProc; // Usar la función global
+        wcex.cbClsExtra    = 0;
+        wcex.cbWndExtra    = 0;
+        wcex.hInstance     = hInstance;
+        wcex.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+        wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
+        wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        wcex.lpszMenuName  = NULL;
+        wcex.lpszClassName = className;
+        wcex.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
+    
+        if (!RegisterClassEx(&wcex)) {
+            return false;
+        }
+    
+        // 2. Creación de la Ventana Principal
+        this->hMainWnd = CreateWindow(
+            className,
+            title,
+            WS_OVERLAPPEDWINDOW,
+            CW_USEDEFAULT, CW_USEDEFAULT,
+            width, height,
+            NULL,
+            NULL,
+            hInstance,
+            NULL // No pasamos 'this' al HWND principal, ya que el Singleton es globalmente accesible.
+        );
+    
+        if (!this->hMainWnd) {
+            return false;
+        }
+    
+        // 3. Mostrar y Actualizar la Ventana
+        ShowWindow(this->hMainWnd, nCmdShow);
+        UpdateWindow(this->hMainWnd);
+    
+        return true;
+    }
+    };
