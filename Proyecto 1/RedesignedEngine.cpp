@@ -53,7 +53,7 @@ class Node : public std::enable_shared_from_this<Node>{
         }
     public:
         Node(const std::string& nodeName = "Unnamed Node") : name(nodeName) {
-            process = [](double deltaTime){}; atEnterTree = [](){}; atExitTree = [](){};
+            process = [](double){}; atEnterTree = [](){}; atExitTree = [](){};
         }
         
         std::vector<std::shared_ptr<Node>>::iterator begin() { return Children.begin();}
@@ -157,7 +157,7 @@ class Node : public std::enable_shared_from_this<Node>{
             if (func) {
                 process = func;
             } else {
-                process = [](double deltaTime){};
+                process = [](double){};
             }
         }
         void setAtEnterFunction(std::function<void()> func) {
@@ -307,6 +307,7 @@ public:
 };
 
 class SceneManager {
+    static unsigned long int frameCount;
     private:
         std::vector<std::weak_ptr<NodeWin32>> dirty_win32_nodes;
         std::shared_ptr<Node> root_node = nullptr; 
@@ -341,6 +342,8 @@ class SceneManager {
             double timeElapsed = (double)(currentTime.QuadPart - m_lastTime.QuadPart) / m_qpf.QuadPart;
             m_deltaTime = timeElapsed;
             m_lastTime = currentTime;
+
+            ++frameCount;
 
             if (!root_node) return;
             root_node->update(timeElapsed);
@@ -406,6 +409,7 @@ class SceneManager {
         }
             // Método de inicialización
         bool initializeMainWindow(HINSTANCE hInstance, int nCmdShow, const TCHAR* className, const TCHAR* title, int width, int height) {
+            frameCount = 0;
             // 1. Registro de la Clase de Ventana
             WNDCLASSEX wcex = {};
                 wcex.cbSize        = sizeof(WNDCLASSEX);
