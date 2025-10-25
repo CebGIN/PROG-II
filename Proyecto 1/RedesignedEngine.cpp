@@ -12,6 +12,16 @@ class Node2D;
 class NodeWin32;
 class SceneManager;
 
+enum class NodeType{
+    NODE,
+    NODE2D,
+    NODEWIN32,
+    LABEL,
+    BUTTON,
+    LINEEDIT,
+    UNKNOWN
+};
+
 inline POINT const operator+(POINT a, POINT b){return {a.x + b.x, a.y + b.y};}
 inline POINT const operator-(POINT a, POINT b){return {a.x - b.x, a.y - b.y};}
 inline bool operator==(POINT a, POINT b){return {(a.x == b.x)&&(a.y == b.y)};}
@@ -139,8 +149,8 @@ class Node : public std::enable_shared_from_this<Node>{
             return name;
         }
     
-        virtual std::string getType() const {
-            return "Node";
+        virtual NodeType getType() const {
+            return NodeType::NODE;
         }
     
         virtual void update(double deltaTime) {
@@ -208,8 +218,8 @@ class Node2D : public Node{
             // std::cout << "Node2D '" << name << "' local position set to (" << position.X << ", " << position.Y << ")." << std::endl;
         }
     
-        std::string getType() const override {
-            return "Node2D";
+        NodeType getType() const override {
+            return NodeType::NODE2D;
         }
         
         POINT getGlobalPosition() const {
@@ -303,6 +313,9 @@ public:
                      );
     
         this->win32_needs_sync = false;
+    }
+    NodeType getType() const override {
+        return NodeType::NODEWIN32;
     }
 };
 
