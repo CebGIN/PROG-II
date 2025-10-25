@@ -9,8 +9,8 @@
 
 inline POINT const operator+(POINT a, POINT b){return {a.x + b.x, a.y + b.y};}
 inline POINT const operator-(POINT a, POINT b){return {a.x - b.x, a.y - b.y};}
-inline bool const operator==(POINT a, POINT b){return {(a.x == b.x)&&(a.y == b.y)};}
-inline bool const operator!=(POINT a, POINT b){return {(a.x != b.x)&&(a.y != b.y)};}
+inline bool operator==(POINT a, POINT b){return {(a.x == b.x)&&(a.y == b.y)};}
+inline bool operator!=(POINT a, POINT b){return {!(a == b)};}
 
 LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -54,13 +54,11 @@ class Node : public std::enable_shared_from_this<Node>{
         template<typename T>
         std::shared_ptr<T> getParentOfType() const {
             static_assert(std::is_base_of<Node, T>::value, "T must be a Node type.");
-            
-            std::shared_ptr<const Node> currentParent = getParent();
+
+            std::shared_ptr<Node> currentParent = getParent();
             
             while (currentParent) {
-                std::shared_ptr<T> parentOfType = std::dynamic_pointer_cast<T>(
-                    std::const_pointer_cast<Node>(currentParent)
-                );
+                std::shared_ptr<T> parentOfType = std::dynamic_pointer_cast<T>(currentParent);
                 
                 if (parentOfType) {
                     return parentOfType;
@@ -163,7 +161,7 @@ class Node : public std::enable_shared_from_this<Node>{
             }
         }
 
-        virtual void invalidateCacheRecursively() const{
+        virtual void invalidateCacheRecursively(){
             for (const auto& child : Children) {
                 child->invalidateCacheRecursively();  
             }
@@ -179,19 +177,7 @@ class Node2D : public Node{
     public:
         Node2D(const std::string& nodeName = "Unnamed Node", POINT nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
         
-        std::shared_ptr<Node2D> getNode2DParent() const {
-            std::shared_ptr<const Node> currentParent = getParent();
-            while (currentParent){
-                std::shared_ptr<Node2D> parent2D = std::dynamic_pointer_cast<Node2D>(currentParent);
-                if (parent2D) {
-                    return parent2D;
-                }
-                currentParent = currentParent->getParent();
-            }
-            return nullptr;
-        }
-        
-        void invalidateCacheRecursively() const override {
+        void invalidateCacheRecursively() override {
             if (!this->is_cached_position_valid) return;// Si ya es inválido, no hacemos nada ni propagamos más
             this->is_cached_position_valid = false;     // Marcar el cache de este nodo como inválido.
             Node::invalidateCacheRecursively();         // Propagar la llamada a los hijos (recursivamente).
@@ -256,32 +242,9 @@ public:
         return hControl;
     }   
 
-    void invalidateCacheRecursively() const override {
-        this->win32_needs_sync = true;
-        std::shared_ptr<NodeWin32> self = std::dynamic_pointer_cast<NodeWin32>(shared_from_this());
-        SceneManager::getInstance().registerDirtyNode(self);
-        Node2D::invalidateCacheRecursively();
-    }
+    void invalidateCacheRecursively() override;
 
-    void enterTree() override {
-        if (hControl != NULL) {
-            ShowWindow(hControl, SW_SHOW);
-            this->win32_needs_sync = true;
-        }
-        if (hControl == NULL) {
-            auto win32Parent = getParentOfType<NodeWin32>();
-            HWND hParent = SceneManager::getInstance().getMainHWND();
-            if(win32Parent){
-                hParent = win32Parent->getControlHandle();
-            }
-            this->hControl = createControl(hParent);   
-        }
-        if (hControl) {
-            SetWindowLongPtr(hControl, GWLP_USERDATA, (LONG_PTR)this);
-        }
-        this->win32_needs_sync = true; 
-        Node2D::enterTree(); 
-    }
+    void enterTree() override;
      
     void exitTree() override {
         Node2D::exitTree(); 
@@ -317,8 +280,7 @@ public:
              parentGlobalPos = parentWin32->getGlobalPosition();
         }
         POINT win32RelativePos = nodeGlobalPos - parentGlobalPos; 
-    
-        // WS_CHILD espera coordenadas relativas a la ventana padre.
+        
         SetWindowPos(this->hControl, NULL, 
                      win32RelativePos.x, 
                      win32RelativePos.y, 
@@ -357,7 +319,7 @@ class SceneManager {
         void processScene() {
             if (!root_node) return;
             root_node->update();
-            for (const std::weak_ptr<NodeWin32>& weakNode : dirty_win32_nodes) {
+            for (std::weak_ptr<NodeWin32>& weakNode : dirty_win32_nodes) {
                 if (std::shared_ptr<NodeWin32> node = weakNode.lock()) {
                     node->synchronizeWin32Control();
                 }
@@ -408,23 +370,22 @@ class SceneManager {
         void stopRunning() {
             this->is_running = false;
         }
-    
         // Método de inicialización
         bool initializeMainWindow(HINSTANCE hInstance, int nCmdShow, const TCHAR* className, const TCHAR* title, int width, int height) {
         // 1. Registro de la Clase de Ventana
         WNDCLASSEX wcex = {};
-        wcex.cbSize        = sizeof(WNDCLASSEX);
-        wcex.style         = CS_HREDRAW | CS_VREDRAW;
-        wcex.lpfnWndProc   = GlobalWindowProc; // Usar la función global
-        wcex.cbClsExtra    = 0;
-        wcex.cbWndExtra    = 0;
-        wcex.hInstance     = hInstance;
-        wcex.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
-        wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
-        wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-        wcex.lpszMenuName  = NULL;
-        wcex.lpszClassName = className;
-        wcex.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
+            wcex.cbSize        = sizeof(WNDCLASSEX);
+            wcex.style         = CS_HREDRAW | CS_VREDRAW;
+            wcex.lpfnWndProc   = GlobalWindowProc; // Usar la función global
+            wcex.cbClsExtra    = 0;
+            wcex.cbWndExtra    = 0;
+            wcex.hInstance     = hInstance;
+            wcex.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+            wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
+            wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+            wcex.lpszMenuName  = NULL;
+            wcex.lpszClassName = className;
+            wcex.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
     
         if (!RegisterClassEx(&wcex)) {
             return false;
@@ -453,4 +414,30 @@ class SceneManager {
     
         return true;
     }
-    };
+};
+
+void NodeWin32::invalidateCacheRecursively() {
+    this->win32_needs_sync = true;
+    std::shared_ptr<NodeWin32> self = std::static_pointer_cast<NodeWin32>(shared_from_this());
+    SceneManager::getInstance().registerDirtyNode(self);
+    Node2D::invalidateCacheRecursively();
+}
+void NodeWin32::enterTree() {
+    if (hControl != NULL) {
+        ShowWindow(hControl, SW_SHOW);
+        this->win32_needs_sync = true;
+    }
+    if (hControl == NULL) {
+        auto win32Parent = getParentOfType<NodeWin32>();
+        HWND hParent = SceneManager::getInstance().getMainHWND();
+        if(win32Parent){
+            hParent = win32Parent->getControlHandle();
+        }
+        this->hControl = createControl(hParent);   
+    }
+    if (hControl) {
+        SetWindowLongPtr(hControl, GWLP_USERDATA, (LONG_PTR)this);
+    }
+    this->win32_needs_sync = true; 
+    Node2D::enterTree(); 
+}
