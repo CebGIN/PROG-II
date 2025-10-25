@@ -20,6 +20,7 @@ class NodeWin32;
 class SceneManager;
 
 class Node : public std::enable_shared_from_this<Node>{
+    friend class SceneManager;
     protected:
         std::vector<std::shared_ptr<Node>> Children;
         std::weak_ptr<Node> Parent;
@@ -29,7 +30,26 @@ class Node : public std::enable_shared_from_this<Node>{
         std::function<void()> atExitTree;
 
         mutable bool its_in_the_tree = false;
-    
+
+        virtual void enterTree() {
+            // 1. Ejecutar la lógica de entrada de este nodo
+            its_in_the_tree = true;
+            atEnterTree();
+            // 2. Propagar la llamada a   a todos los hijos
+            for (const auto& child : Children) {
+                child->enterTree(); 
+            }
+        }
+
+        virtual void exitTree() {
+            // 1. Propagar la llamada a salir a todos los hijos
+            for (const auto& child : Children) {
+                child->exitTree(); 
+            }
+            // 2. Ejecutar la lógica de salida de este nodo
+            atExitTree();
+            its_in_the_tree = false;
+        }
     public:
         Node(const std::string& nodeName = "Unnamed Node") : name(nodeName) {
             process = [](){};
@@ -132,35 +152,27 @@ class Node : public std::enable_shared_from_this<Node>{
             }
         }
 
-        virtual void enterTree() {
-            // 1. Ejecutar la lógica de entrada de este nodo
-            its_in_the_tree = true;
-            atEnterTree();
-            // 2. Propagar la llamada a   a todos los hijos
-            for (const auto& child : Children) {
-                child->enterTree(); 
-            }
-        }
-
-        virtual void exitTree() {
-            // 1. Propagar la llamada a salir a todos los hijos
-            for (const auto& child : Children) {
-                child->exitTree(); 
-            }
-            // 2. Ejecutar la lógica de salida de este nodo
-            atExitTree();
-            its_in_the_tree = false;
-        }
-
         void setProcessFunction(std::function<void()> func) {
             if (func) {
                 process = func;
             } else {
-                process = [](){}; 
-                // std::cerr << "Warning: Attempted to set a null process function for Node '" << name << "'." << std::endl;
+                process = [](){};
             }
         }
-
+        void setAtEnterFunction(std::function<void()> func) {
+            if (func) {
+                atEnterTree = func;
+            } else {
+                atEnterTree = [](){}; 
+            }
+        }
+        void setAtExitFunction(std::function<void()> func) {
+            if (func) {
+                atExitTree = func;
+            } else {
+                atExitTree = [](){};
+            }
+        }
         virtual void invalidateCacheRecursively(){
             for (const auto& child : Children) {
                 child->invalidateCacheRecursively();  
@@ -169,6 +181,7 @@ class Node : public std::enable_shared_from_this<Node>{
     };
 
 class Node2D : public Node{
+    friend class SceneManager;
     protected:
         POINT position;
         mutable POINT cached_global_position;
@@ -220,6 +233,7 @@ class Node2D : public Node{
 };
 
 class NodeWin32 : public Node2D {
+    friend class SceneManager;
 protected:
     POINT size = {1, 1};
     HWND hControl = NULL;
@@ -228,6 +242,16 @@ protected:
 
     virtual HWND createControl(HWND hParent) = 0;
 
+    void enterTree() override;
+    void exitTree() override {
+        Node2D::exitTree(); 
+        if (this->hControl != NULL) {
+            ShowWindow(this->hControl, SW_HIDE);
+            this->win32_needs_sync = false;
+            // Desvincular el puntero C++
+            SetWindowLongPtr(this->hControl, GWLP_USERDATA, 0); 
+        }
+    }
 public:
     NodeWin32(const std::string& nodeName = "Unnamed Node", POINT nodePosition = {0, 0}, POINT nodeSize = {1, 1}) : Node2D(nodeName, nodePosition),size(nodeSize) {}
     
@@ -243,18 +267,6 @@ public:
     }   
 
     void invalidateCacheRecursively() override;
-
-    void enterTree() override;
-     
-    void exitTree() override {
-        Node2D::exitTree(); 
-        if (this->hControl != NULL) {
-            ShowWindow(this->hControl, SW_HIDE);
-            this->win32_needs_sync = false;
-            // Desvincular el puntero C++
-            SetWindowLongPtr(this->hControl, GWLP_USERDATA, 0); 
-        }
-    }
 
     void setSize(POINT new_size) {
         if (new_size.x == size.x && new_size.y == size.y) return;
