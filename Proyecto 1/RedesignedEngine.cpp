@@ -52,7 +52,7 @@ class Node : public std::enable_shared_from_this<Node>{
         }
     public:
         Node(const std::string& nodeName = "Unnamed Node") : name(nodeName) {
-            process = [](){};
+            process = [](){}; atEnterTree = [](){}; atExitTree = [](){};
         }
         
         std::vector<std::shared_ptr<Node>>::iterator begin() { return Children.begin();}
@@ -366,16 +366,27 @@ class SceneManager {
             
             MSG msg = {};
             
-            // Bucle de Mensajes
-            while (this->is_running && GetMessage(&msg, NULL, 0, 0)) {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
+            while (this->is_running) {
+        
+                // 1. Procesar todos los mensajes pendientes (NO BLOQUEANTE)
+                // PM_REMOVE: Procesar y eliminar el mensaje de la cola.
+                while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+                    // Si recibimos el mensaje de salida, terminamos el bucle exterior.
+                    if (msg.message == WM_QUIT) {
+                        this->is_running = false;
+                        break; 
+                    }
+                    
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
+                }
                 
-                // Llamada a la Lógica de Escena y Sincronización
-                // (Se ejecuta cuando no hay mensajes bloqueantes)
-                if (this->root_node) {
+                // 2. Si el motor sigue activo, ejecutar la lógica de la escena.
+                // Esto se ejecutará incluso si no hubo mensajes.
+                if (this->is_running && this->root_node) {
                     this->processScene();
                 }
+                Sleep(20);
             }
         }
     
