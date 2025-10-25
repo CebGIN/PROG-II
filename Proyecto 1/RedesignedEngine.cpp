@@ -7,6 +7,11 @@
 #include <vector>
 #include <string>
 
+class Node;
+class Node2D;
+class NodeWin32;
+class SceneManager;
+
 inline POINT const operator+(POINT a, POINT b){return {a.x + b.x, a.y + b.y};}
 inline POINT const operator-(POINT a, POINT b){return {a.x - b.x, a.y - b.y};}
 inline bool operator==(POINT a, POINT b){return {(a.x == b.x)&&(a.y == b.y)};}
@@ -14,10 +19,6 @@ inline bool operator!=(POINT a, POINT b){return {!(a == b)};}
 
 LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-class Node;
-class Node2D;
-class NodeWin32;
-class SceneManager;
 
 class Node : public std::enable_shared_from_this<Node>{
     friend class SceneManager;
@@ -25,7 +26,7 @@ class Node : public std::enable_shared_from_this<Node>{
         std::vector<std::shared_ptr<Node>> Children;
         std::weak_ptr<Node> Parent;
         std::string name;
-        std::function<void()> process;
+        std::function<void(double deltaTime)> process;
         std::function<void()> atEnterTree;
         std::function<void()> atExitTree;
 
@@ -52,7 +53,7 @@ class Node : public std::enable_shared_from_this<Node>{
         }
     public:
         Node(const std::string& nodeName = "Unnamed Node") : name(nodeName) {
-            process = [](){}; atEnterTree = [](){}; atExitTree = [](){};
+            process = [](double deltaTime){}; atEnterTree = [](){}; atExitTree = [](){};
         }
         
         std::vector<std::shared_ptr<Node>>::iterator begin() { return Children.begin();}
@@ -142,21 +143,21 @@ class Node : public std::enable_shared_from_this<Node>{
             return "Node";
         }
     
-        virtual void update() {
+        virtual void update(double deltaTime) {
             // 1. Ejecutar la lógica de proceso de este nodo
-            process(); 
+            process(deltaTime); 
     
             // 2. Propagar la llamada a update a todos los hijos
             for (const auto& child : Children) {
-                child->update(); 
+                child->update(deltaTime); 
             }
         }
 
-        void setProcessFunction(std::function<void()> func) {
+        void setProcessFunction(std::function<void(double deltaTime)> func) {
             if (func) {
                 process = func;
             } else {
-                process = [](){};
+                process = [](double deltaTime){};
             }
         }
         void setAtEnterFunction(std::function<void()> func) {
@@ -314,12 +315,16 @@ class SceneManager {
         bool is_running = false; 
         SceneManager() = default;
         
+        LARGE_INTEGER m_qpf;             // Frecuencia del contador (Hz)
+        LARGE_INTEGER m_lastTime;        // Tiempo en el frame anterior
+        double m_deltaTime = 0.0;        // Último Delta Time (en segundos)
+
     public:
         static SceneManager& getInstance(){
             static SceneManager instance;
             return instance;
         }
-        // Método para obtener el HWND de la ventana principal (utilizado por NodeWin32)
+
         HWND getMainHWND() const {
              return hMainWnd; 
         }
@@ -329,8 +334,16 @@ class SceneManager {
         }
     
         void processScene() {
+            // 1. Cálculo de Delta Time
+            LARGE_INTEGER currentTime;
+            QueryPerformanceCounter(&currentTime);
+
+            double timeElapsed = (double)(currentTime.QuadPart - m_lastTime.QuadPart) / m_qpf.QuadPart;
+            m_deltaTime = timeElapsed;
+            m_lastTime = currentTime;
+
             if (!root_node) return;
-            root_node->update();
+            root_node->update(timeElapsed);
             for (std::weak_ptr<NodeWin32>& weakNode : dirty_win32_nodes) {
                 if (std::shared_ptr<NodeWin32> node = weakNode.lock()) {
                     node->synchronizeWin32Control();
@@ -368,8 +381,7 @@ class SceneManager {
             
             while (this->is_running) {
         
-                // 1. Procesar todos los mensajes pendientes (NO BLOQUEANTE)
-                // PM_REMOVE: Procesar y eliminar el mensaje de la cola.
+                // 1. Procesar todos los mensajes pendientes
                 while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
                     // Si recibimos el mensaje de salida, terminamos el bucle exterior.
                     if (msg.message == WM_QUIT) {
@@ -382,7 +394,6 @@ class SceneManager {
                 }
                 
                 // 2. Si el motor sigue activo, ejecutar la lógica de la escena.
-                // Esto se ejecutará incluso si no hubo mensajes.
                 if (this->is_running && this->root_node) {
                     this->processScene();
                 }
@@ -393,50 +404,55 @@ class SceneManager {
         void stopRunning() {
             this->is_running = false;
         }
-        // Método de inicialización
+            // Método de inicialización
         bool initializeMainWindow(HINSTANCE hInstance, int nCmdShow, const TCHAR* className, const TCHAR* title, int width, int height) {
-        // 1. Registro de la Clase de Ventana
-        WNDCLASSEX wcex = {};
-            wcex.cbSize        = sizeof(WNDCLASSEX);
-            wcex.style         = CS_HREDRAW | CS_VREDRAW;
-            wcex.lpfnWndProc   = GlobalWindowProc; // Usar la función global
-            wcex.cbClsExtra    = 0;
-            wcex.cbWndExtra    = 0;
-            wcex.hInstance     = hInstance;
-            wcex.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
-            wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
-            wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-            wcex.lpszMenuName  = NULL;
-            wcex.lpszClassName = className;
-            wcex.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
-    
-        if (!RegisterClassEx(&wcex)) {
-            return false;
+            // 1. Registro de la Clase de Ventana
+            WNDCLASSEX wcex = {};
+                wcex.cbSize        = sizeof(WNDCLASSEX);
+                wcex.style         = CS_HREDRAW | CS_VREDRAW;
+                wcex.lpfnWndProc   = GlobalWindowProc; // Usar la función global
+                wcex.cbClsExtra    = 0;
+                wcex.cbWndExtra    = 0;
+                wcex.hInstance     = hInstance;
+                wcex.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+                wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
+                wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+                wcex.lpszMenuName  = NULL;
+                wcex.lpszClassName = className;
+                wcex.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
+        
+            if (!RegisterClassEx(&wcex)) {
+                return false;
+            }
+            // 2. Creación de la Ventana Principal
+            this->hMainWnd = CreateWindow(
+                className,
+                title,
+                WS_OVERLAPPEDWINDOW,
+                CW_USEDEFAULT, CW_USEDEFAULT,
+                width, height,
+                NULL,
+                NULL,
+                hInstance,
+                NULL // No pasamos 'this' al HWND principal, ya que el Singleton es globalmente accesible.
+            );
+            if (!this->hMainWnd) {
+                return false;
+            }
+            // 3. Mostrar y Actualizar la Ventana
+            ShowWindow(this->hMainWnd, nCmdShow);
+            UpdateWindow(this->hMainWnd);
+            // 4. Inicializar el Contador de Rendimiento
+            if (!QueryPerformanceFrequency(&m_qpf)) {
+                // Manejar el error si el contador de rendimiento no está disponible
+                m_qpf.QuadPart = 0; 
+                return false;
+            }
+            // Obtener el tiempo inicial
+            QueryPerformanceCounter(&m_lastTime);
+
+            return true;
         }
-    
-        // 2. Creación de la Ventana Principal
-        this->hMainWnd = CreateWindow(
-            className,
-            title,
-            WS_OVERLAPPEDWINDOW,
-            CW_USEDEFAULT, CW_USEDEFAULT,
-            width, height,
-            NULL,
-            NULL,
-            hInstance,
-            NULL // No pasamos 'this' al HWND principal, ya que el Singleton es globalmente accesible.
-        );
-    
-        if (!this->hMainWnd) {
-            return false;
-        }
-    
-        // 3. Mostrar y Actualizar la Ventana
-        ShowWindow(this->hMainWnd, nCmdShow);
-        UpdateWindow(this->hMainWnd);
-    
-        return true;
-    }
 };
 
 void NodeWin32::invalidateCacheRecursively() {
