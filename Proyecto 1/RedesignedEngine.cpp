@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <windows.h>
 #include <iostream>
-#include <tchar.h>
 #include <memory>
 #include <vector>
 #include <string>
@@ -11,7 +10,15 @@ class Node;
 class Node2D;
 class NodeWin32;
 class SceneManager;
-
+enum class NodeType{
+    NODE,
+    NODE2D,
+    NODEWIN32,
+    LABEL,
+    BUTTON,
+    LINEEDIT,
+    UNKNOWN
+};
 inline POINT const operator+(POINT a, POINT b){return {a.x + b.x, a.y + b.y};}
 inline POINT const operator-(POINT a, POINT b){return {a.x - b.x, a.y - b.y};}
 inline bool operator==(POINT a, POINT b){return {(a.x == b.x)&&(a.y == b.y)};}
@@ -25,7 +32,7 @@ class Node : public std::enable_shared_from_this<Node>{
     protected:
         std::vector<std::shared_ptr<Node>> Children;
         std::weak_ptr<Node> Parent;
-        std::string name;
+        std::wstring name;
         std::function<void(double deltaTime)> process;
         std::function<void()> atEnterTree;
         std::function<void()> atExitTree;
@@ -52,7 +59,7 @@ class Node : public std::enable_shared_from_this<Node>{
             its_in_the_tree = false;
         }
     public:
-        Node(const std::string& nodeName = "Unnamed Node") : name(nodeName) {
+        Node(const std::wstring& nodeName = L"Unnamed Node") : name(nodeName) {
             process = [](double){}; atEnterTree = [](){}; atExitTree = [](){};
         }
         
@@ -135,12 +142,12 @@ class Node : public std::enable_shared_from_this<Node>{
             }
         }
     
-        const std::string& getName() const {
+        const std::wstring& getName() const {
             return name;
         }
     
-        virtual std::string getType() const {
-            return "Node";
+        virtual NodeType getType() const {
+            return NodeType::NODE;
         }
     
         virtual void update(double deltaTime) {
@@ -189,7 +196,7 @@ class Node2D : public Node{
         mutable bool is_cached_position_valid = false;
 
     public:
-        Node2D(const std::string& nodeName = "Unnamed Node", POINT nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
+        Node2D(const std::wstring& nodeName = L"Unnamed Node", POINT nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
         
         void invalidateCacheRecursively() override {
             if (!this->is_cached_position_valid) return;// Si ya es inválido, no hacemos nada ni propagamos más
@@ -208,8 +215,8 @@ class Node2D : public Node{
             // std::cout << "Node2D '" << name << "' local position set to (" << position.X << ", " << position.Y << ")." << std::endl;
         }
     
-        std::string getType() const override {
-            return "Node2D";
+        NodeType getType() const override {
+            return NodeType::NODE2D;
         }
         
         POINT getGlobalPosition() const {
@@ -254,7 +261,7 @@ protected:
         }
     }
 public:
-    NodeWin32(const std::string& nodeName = "Unnamed Node", POINT nodePosition = {0, 0}, POINT nodeSize = {1, 1}) : Node2D(nodeName, nodePosition),size(nodeSize) {}
+    NodeWin32(const std::wstring& nodeName = L"Unnamed Node", POINT nodePosition = {0, 0}, POINT nodeSize = {1, 1}) : Node2D(nodeName, nodePosition),size(nodeSize) {}
     
     ~NodeWin32() override {
         if (this->hControl != NULL) {
@@ -262,6 +269,8 @@ public:
             this->hControl = NULL; 
         }
     }
+    
+    NodeType getType() const override { return NodeType::NODEWIN32; }
 
     HWND getControlHandle(){
         return hControl;
@@ -307,20 +316,20 @@ public:
 };
 
 class SceneManager {
-    static unsigned long int frameCount;
     private:
-        std::vector<std::weak_ptr<NodeWin32>> dirty_win32_nodes;
-        std::shared_ptr<Node> root_node = nullptr; 
-        
-        HWND hMainWnd = NULL; 
-        bool is_running = false; 
-        SceneManager() = default;
-        
-        LARGE_INTEGER m_qpf;             // Frecuencia del contador (Hz)
-        LARGE_INTEGER m_lastTime;        // Tiempo en el frame anterior
-        double m_deltaTime = 0.0;        // Último Delta Time (en segundos)
-
+    std::vector<std::weak_ptr<NodeWin32>> dirty_win32_nodes;
+    std::shared_ptr<Node> root_node = nullptr; 
+    
+    HWND hMainWnd = NULL; 
+    bool is_running = false; 
+    SceneManager() = default;
+    
+    LARGE_INTEGER m_qpf;             // Frecuencia del contador (Hz)
+    LARGE_INTEGER m_lastTime;        // Tiempo en el frame anterior
+    double m_deltaTime = 0.0;        // Último Delta Time (en segundos)
+    
     public:
+        static unsigned long int frameCount;
         static SceneManager& getInstance(){
             static SceneManager instance;
             return instance;
@@ -458,6 +467,86 @@ class SceneManager {
             return true;
         }
 };
+
+// --- CLASS LABEL NODE ---
+class LabelNode : public NodeWin32 {
+private:
+    std::wstring text;
+protected:
+    HWND createControl(HWND hParent) override {
+        // Crea un control estático (Label)
+        HWND handle = CreateWindowExW(
+            0,
+            L"STATIC", // Clase de ventana Win32 para texto estático
+            text.c_str(),  // Texto inicial
+            WS_CHILD | WS_VISIBLE | SS_LEFT, // Estilos: Hijo, Visible, Alineación izquierda
+            0, 0, size.x, size.y,
+            hParent, // HWND Padre
+            NULL,    // No Menu/ID
+            GetModuleHandle(NULL),
+            NULL
+        );
+        return handle;
+    }
+public:
+    LabelNode(const std::wstring& name = L"Label", POINT pos = {0, 0}, POINT size = {100, 20}, const std::wstring& initialText = L"") 
+        : NodeWin32(name, pos, size), text(initialText) {}
+
+    NodeType getType() const override { return NodeType::LABEL; }
+
+    void setText(const std::wstring& newText) {
+        if (text == newText) return;
+        text = newText;
+        if (hControl) {
+            // Actualiza el texto en el control Win32 inmediatamente
+            SetWindowTextW(hControl, text.c_str());
+        }
+    }
+    const std::wstring& getText() const { return text; }
+};
+
+// --- CLASS LINE EDIT NODE ---
+class LineEditNode : public NodeWin32 {
+protected:
+    HWND createControl(HWND hParent) override {
+        // Crea un control de edición (campo de texto)
+        HWND handle = CreateWindowExW(
+            WS_EX_CLIENTEDGE, // Borde hundido
+            L"EDIT",     // Clase de ventana Win32 para campos de edición
+            L"",         // Texto inicial vacío
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_LEFT | ES_AUTOHSCROLL, 
+            0, 0, size.x, size.y,
+            hParent,
+            NULL,
+            GetModuleHandle(NULL),
+            NULL
+        );
+        return handle;
+    }
+public:
+    LineEditNode(const std::wstring& name = L"LineEdit", POINT pos = {0, 0}, POINT size = {150, 20})
+        : NodeWin32(name, pos, size) {}
+
+    NodeType getType() const override { return NodeType::LINEEDIT; }
+
+    std::wstring getText() const {
+        if (!hControl) return L"";
+        int len = GetWindowTextLength(hControl);
+        if (len == 0) return L"";
+        
+        // Uso de std::vector para almacenar el texto de forma segura
+        std::vector<wchar_t> buffer(len + 1);
+        GetWindowTextW(hControl, buffer.data(), len + 1);
+        return std::wstring(buffer.data());
+    }
+
+    void setText(const std::wstring& newText) {
+        if (hControl) {
+            SetWindowTextW(hControl, newText.c_str());
+        }
+    }
+};
+
 
 void NodeWin32::invalidateCacheRecursively() {
     this->win32_needs_sync = true;
