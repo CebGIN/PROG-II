@@ -453,3 +453,17 @@ void NodeWin32::enterTree() {
     this->win32_needs_sync = true; 
     Node2D::enterTree(); 
 }
+
+LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+        case WM_DESTROY:
+            SceneManager::getInstance().stopRunning(); 
+            PostQuitMessage(0);
+            return 0;
+        case WM_COMMAND:
+            // Lógica para interceptar eventos de botones, etc.
+            // Requiere más complejidad para mapear a los nodos.
+            return 0;
+    }
+    return DefWindowProc(hWnd, message, wParam, lParam);
+}
