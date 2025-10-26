@@ -320,7 +320,6 @@ public:
 };
 
 class SceneManager {
-    static unsigned long int frameCount;
     private:
         std::vector<std::weak_ptr<NodeWin32>> dirty_win32_nodes;
         std::shared_ptr<Node> root_node = nullptr; 
@@ -334,6 +333,7 @@ class SceneManager {
         double m_deltaTime = 0.0;        // Último Delta Time (en segundos)
 
     public:
+        unsigned long int frameCount;
         static SceneManager& getInstance(){
             static SceneManager instance;
             return instance;
@@ -356,7 +356,7 @@ class SceneManager {
             m_deltaTime = timeElapsed;
             m_lastTime = currentTime;
 
-            ++frameCount;
+            frameCount++;
 
             if (!root_node) return;
             root_node->update(timeElapsed);
@@ -510,4 +510,37 @@ LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
             return 0;
     }
     return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+// --- TEST CASE: SCENE CREATION ---
+std::shared_ptr<Node> createBasicScene() {
+    // We only need a Node as the root. No Win32 controls are attached.
+    auto root = std::make_shared<Node>("RootScene");
+    
+    // Optional: Add some entry/exit logging to confirm lifecycle works
+    root->setAtEnterFunction([](){
+        std::cout << "RootScene entered the tree. Window initialized." << std::endl;
+    });
+    root->setAtExitFunction([](){
+        std::cout << "RootScene exited the tree. Window closing." << std::endl;
+    });
+
+    return root;
+}
+
+int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow) {
+    // 1. Create the single root Node.
+    std::shared_ptr<Node> rootScene = createBasicScene();
+
+    // 2. Get the Singleton Manager.
+    SceneManager& manager = SceneManager::getInstance();
+    
+    // 3. Set the scene (initializes tree lifecycle).
+    manager.changeScene(rootScene);
+
+    // 4. Start the main Windows message loop (creates the window).
+    manager.startRunning(hInstance, nCmdShow); 
+
+    // The program exits here when the window is closed and PostQuitMessage is called.
+    return 0;
 }
