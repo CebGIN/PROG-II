@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <windows.h>
 #include <iostream>
-#include <tchar.h>
 #include <memory>
 #include <vector>
 #include <string>
@@ -383,10 +382,10 @@ class SceneManager {
         }
     
         void startRunning(HINSTANCE hInstance, int nCmdShow) {
-            const TCHAR* className = TEXT("NodeEngineApp");
+            const std::string className = "NodeEngineApp";
             
             // Inicialización de la ventana
-            if (!initializeMainWindow(hInstance, nCmdShow, className, TEXT("Node Engine Demo"), 800, 600)) {
+            if (!initializeMainWindow(hInstance, nCmdShow, className, "Node Engine Demo", 800, 600)) {
                 std::cerr << "Engine Initialization Failed." << std::endl;
                 return;
             }
@@ -413,7 +412,6 @@ class SceneManager {
                 if (this->is_running && this->root_node) {
                     this->processScene();
                 }
-                Sleep(20);
             }
         }
     
@@ -421,30 +419,30 @@ class SceneManager {
             this->is_running = false;
         }
             // Método de inicialización
-        bool initializeMainWindow(HINSTANCE hInstance, int nCmdShow, const TCHAR* className, const TCHAR* title, int width, int height) {
+        bool initializeMainWindow(HINSTANCE hInstance, int nCmdShow, const std::string className, const std::string title, int width, int height) {
             frameCount = 0;
             // 1. Registro de la Clase de Ventana
-            WNDCLASSEX wcex = {};
-                wcex.cbSize        = sizeof(WNDCLASSEX);
-                wcex.style         = CS_HREDRAW | CS_VREDRAW;
-                wcex.lpfnWndProc   = GlobalWindowProc; // Usar la función global
-                wcex.cbClsExtra    = 0;
-                wcex.cbWndExtra    = 0;
-                wcex.hInstance     = hInstance;
-                wcex.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
-                wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
-                wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-                wcex.lpszMenuName  = NULL;
-                wcex.lpszClassName = className;
-                wcex.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
+            _WNDCLASSEXA wcex = {};
+            wcex.cbSize        = sizeof(WNDCLASSEXA);
+            wcex.style         = CS_HREDRAW | CS_VREDRAW;
+            wcex.lpfnWndProc   = GlobalWindowProc; // Usar la función global
+            wcex.cbClsExtra    = 0;
+            wcex.cbWndExtra    = 0;
+            wcex.hInstance     = hInstance;
+            wcex.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+            wcex.hCursor       = LoadCursor(NULL, IDC_ARROW);
+            wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+            wcex.lpszMenuName  = NULL;
+            wcex.lpszClassName = className.c_str();
+            wcex.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
         
-            if (!RegisterClassEx(&wcex)) {
+            if (!RegisterClassExA(&wcex)) {
                 return false;
             }
             // 2. Creación de la Ventana Principal
-            this->hMainWnd = CreateWindow(
-                className,
-                title,
+            this->hMainWnd = CreateWindowA(
+                className.c_str(),
+                title.c_str(),
                 WS_OVERLAPPEDWINDOW,
                 CW_USEDEFAULT, CW_USEDEFAULT,
                 width, height,
@@ -512,25 +510,13 @@ LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
     return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
-// --- TEST CASE: SCENE CREATION ---
-std::shared_ptr<Node> createBasicScene() {
-    // We only need a Node as the root. No Win32 controls are attached.
-    auto root = std::make_shared<Node>("RootScene");
-    
-    // Optional: Add some entry/exit logging to confirm lifecycle works
-    root->setAtEnterFunction([](){
-        std::cout << "RootScene entered the tree. Window initialized." << std::endl;
-    });
-    root->setAtExitFunction([](){
-        std::cout << "RootScene exited the tree. Window closing." << std::endl;
-    });
 
-    return root;
-}
 
-int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow) {
-    // 1. Create the single root Node.
-    std::shared_ptr<Node> rootScene = createBasicScene();
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    // 1. Create the root
+    std::shared_ptr<Node> rootScene;// = createScene();
 
     // 2. Get the Singleton Manager.
     SceneManager& manager = SceneManager::getInstance();
