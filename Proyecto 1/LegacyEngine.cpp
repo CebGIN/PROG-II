@@ -5,6 +5,26 @@
 #include <memory>
 #include <string>
 
+class Node;
+class Node2D;
+class NodeUI;
+class NodePCT;
+class NodeButton;
+class SceneManager;
+
+enum class NodeType{
+    NODE,
+    NODE2D,
+    NODEUI,
+    NODEPCT,
+    NODEBUTTON,
+};
+
+inline COORD const operator+(COORD a, COORD b){return {static_cast<SHORT>(a.X + b.X), static_cast<SHORT>(a.Y + b.Y)};}
+inline COORD const operator-(COORD a, COORD b){return {static_cast<SHORT>(a.X - b.X), static_cast<SHORT>(a.Y - b.Y)};}
+inline bool operator==(COORD a, COORD b){return {(a.X == b.X)&&(a.Y == b.Y)};}
+inline bool operator!=(COORD a, COORD b){return {!(a == b)};}
+
 // --- Input Class and Console Helpers ---
 namespace Input{
     HANDLE hStdin = INVALID_HANDLE_VALUE;
@@ -119,13 +139,6 @@ namespace Color {
     
 };
 
-COORD addCoords(COORD A, COORD B){
-    return {static_cast<SHORT>(A.X + B.X), static_cast<SHORT>(A.Y + B.Y)};
-}
-COORD subtractCoords(COORD A, COORD B){
-    return {static_cast<SHORT>(A.X - B.X), static_cast<SHORT>(A.Y - B.Y)};
-}
-
 class ConsoleRenderer {
 private:
     COORD consoleBufferSize;
@@ -135,6 +148,7 @@ public:
     ConsoleRenderer(COORD bufferSize) : consoleBufferSize(bufferSize) {
         screenBuffer.resize(bufferSize.X * bufferSize.Y);
         clearBuffer(); // Inicializar con espacios en blanco
+
     }
     // Limpia el búfer con espacios y atributos por defecto
     void clearBuffer() {
@@ -161,7 +175,7 @@ public:
     
     void putString(COORD pos, const std::string& text, WORD attributes) {
         for (size_t i = 0; i < text.length(); ++i) {
-            putChar(addCoords(pos, {static_cast<SHORT>(i), 0}), static_cast<WCHAR>(text[i]), attributes);
+            putChar((pos + COORD{static_cast<SHORT>(i), 0}), static_cast<WCHAR>(text[i]), attributes);
         }
     }
 
@@ -181,16 +195,41 @@ public:
 };
 
 class Node : public std::enable_shared_from_this<Node>{
+    friend class SceneManager;
 protected:
     std::vector<std::shared_ptr<Node>> Children;
     std::weak_ptr<Node> Parent;
     std::string name;
-    std::function<void()> process;
+    std::function<void(double)> process;
+    std::function<void()> atEnterTree;
+    std::function<void()> atExitTree;
+
+    mutable bool its_in_the_tree = false;
+
+    virtual void enterTree() {
+        // 1. Ejecutar la lógica de entrada de este nodo
+        its_in_the_tree = true;
+        atEnterTree();
+        // 2. Propagar la llamada a   a todos los hijos
+        for (const auto& child : Children) {
+            child->enterTree(); 
+        }
+    }
+
+    virtual void exitTree() {
+        // 1. Propagar la llamada a salir a todos los hijos
+        for (const auto& child : Children) {
+            child->exitTree(); 
+        }
+        // 2. Ejecutar la lógica de salida de este nodo
+        atExitTree();
+        its_in_the_tree = false;
+    }
 
 public:
     Node(const std::string& nodeName = "Unnamed Node") : name(nodeName) {
         // std::cout << "Node '" << name << "' created." << std::endl;
-        process = [](){ /* Do nothing by default */ };
+        process = [](double){}; atEnterTree = [](){}; atExitTree = [](){};
     }
     
     virtual ~Node() {
@@ -203,6 +242,23 @@ public:
 
     std::shared_ptr<Node> getParent() const {
         return Parent.lock();
+    }
+
+    template<typename T>
+    std::shared_ptr<T> getParentOfType() const {
+        static_assert(std::is_base_of<Node, T>::value, "T must be a Node type.");
+
+        std::shared_ptr<Node> currentParent = getParent();
+        
+        while (currentParent) {
+            std::shared_ptr<T> parentOfType = std::dynamic_pointer_cast<T>(currentParent);
+            
+            if (parentOfType) {
+                return parentOfType;
+            }
+            currentParent = currentParent->getParent();
+        }
+        return nullptr;
     }
 
     bool isRoot() const {
@@ -249,45 +305,38 @@ public:
         return name;
     }
 
-    virtual std::string getType() const {
-        return "Node";
+    virtual NodeType getType() const {
+        return NodeType::NODE;
     }
 
-    virtual void update() {
+    virtual void update(double deltaTime) {
         // 1. Ejecutar la lógica de proceso de este nodo
-        process(); 
+        process(deltaTime); 
 
         // 2. Propagar la llamada a update a todos los hijos
         for (const auto& child : Children) {
-            child->update(); 
+            child->update(deltaTime); 
         }
     }
 
-    void setProcessFunction(std::function<void()> func) {
+    void setProcessFunction(std::function<void(double)> func) {
         if (func) {
             process = func;
         } else {
-            process = [](){}; 
+            process = [](double){}; 
             // std::cerr << "Warning: Attempted to set a null process function for Node '" << name << "'." << std::endl;
         }
     }
 
     virtual void draw(ConsoleRenderer& renderer) {
-    for (const auto& child : Children) {
-        child->draw(renderer); // Propagar la llamada a draw a los hijos
-    }
-}
-
-    void printHierarchy(int indentLevel = 0) const {//debug
-        std::cout << std::string(indentLevel * 4, ' ');
-        std::cout << "- " << name << " (" << getType() << ")"; // Print node type
-        if (isRoot()) {
-            std::cout << " (Root)";
-        }
-        std::cout << std::endl;
-
         for (const auto& child : Children) {
-            child->printHierarchy(indentLevel + 1);
+            child->draw(renderer); // Propagar la llamada a draw a los hijos
+        }
+    }
+
+    virtual void invalidateCacheRecursively(){
+        for (const auto& child : Children) {
+            child->invalidateCacheRecursively();  
         }
     }
 };
@@ -295,48 +344,51 @@ public:
 class Node2D : public Node{
 protected:
     COORD position;
-    public:
+    mutable COORD cached_global_position;
+    mutable bool is_cached_position_valid = false;
+    
+public:
     
     Node2D(const std::string& nodeName = "Unnamed Node", COORD nodePosition = {0, 0}) : Node(nodeName), position(nodePosition){}
 
+    void invalidateCacheRecursively() override {
+        if (!this->is_cached_position_valid) return;// Si ya es inválido, no hacemos nada ni propagamos más
+        this->is_cached_position_valid = false;     // Marcar el cache de este nodo como inválido.
+        Node::invalidateCacheRecursively();         // Propagar la llamada a los hijos (recursivamente).
+    }
 
     COORD getLocalPosition() const {
         return position;
     }
     void setLocalPosition(COORD new_position){
+        if(new_position == position) return;
         position = new_position;
-        std::cout << "Node2D '" << name << "' local position set to (" << position.X << ", " << position.Y << ")." << std::endl;
+        invalidateCacheRecursively();
+        // std::cout << "Node2D '" << name << "' local position set to (" << position.X << ", " << position.Y << ")." << std::endl;
     }
-
-    std::string getType() const override {
-        return "Node2D";
+    NodeType getType() const override {
+        return NodeType::NODE2D;
     }
 
     COORD getGlobalPosition() const {
+        if (is_cached_position_valid) return cached_global_position;
         COORD globalPos = position;
 
-        std::shared_ptr<Node> currentParent = getParent(); 
-        while (currentParent) {
-            std::shared_ptr<Node2D> parent2D = std::dynamic_pointer_cast<Node2D>(currentParent);
-            if (parent2D) {
-                globalPos = addCoords(parent2D->position, globalPos);
-            }
-            currentParent = currentParent->getParent();
-        }
+        std::shared_ptr<Node2D> parent2D = getParentOfType<Node2D>();
+
+        if(parent2D) globalPos = globalPos + parent2D->getGlobalPosition();
+
+        cached_global_position = globalPos;
+        is_cached_position_valid = true;
         return globalPos;
     }
     
     void setGlobalPosition(COORD newGlobalPosition) {
-        COORD currentGlobalPosition = getGlobalPosition(); // G
-        COORD currentLocalPosition = getLocalPosition();   // L
-
-        COORD newLocalPosition = addCoords(newGlobalPosition, currentLocalPosition); // Gn + L
-        newLocalPosition = subtractCoords(newLocalPosition, currentGlobalPosition);  // (Gn + L) - G
-
-        setLocalPosition(newLocalPosition);
-        std::cout << "Node2D '" << name << "' global position set to ("
-                  << newGlobalPosition.X << ", " << newGlobalPosition.Y << ")"
-                  << " (New Local: " << newLocalPosition.X << ", " << newLocalPosition.Y << ")." << std::endl;
+        //newLocalPosition = ((newGlobalPosition + currentLocalPosition) - currentGlobalPosition); (Gn + L) - G
+        setLocalPosition(((newGlobalPosition + getLocalPosition()) - getGlobalPosition()));
+        this->cached_global_position = newGlobalPosition;
+        this->is_cached_position_valid = true;
+        // std::cout << "Node2D '" << name << "' global position set to (" << newGlobalPosition.X << ", " << newGlobalPosition.Y << ")" << " (New Local: " << newLocalPosition.X << ", " << newLocalPosition.Y << ")." << std::endl;
     }
 };
 
@@ -371,8 +423,8 @@ public:
         }
     }
 
-    std::string getType() const override {
-        return "NodeUI";
+    NodeType getType() const override {
+        return NodeType::NODEUI;
     }
 
     bool is_inside(const COORD point){
@@ -386,7 +438,7 @@ public:
         WORD defaultAttributes = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; // White
 
         for (SHORT y_offset = 0; y_offset < static_cast<SHORT>(text.size()); ++y_offset) {
-            COORD currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
+            COORD currentLineGlobalPos = (globalPos + COORD{0, y_offset});
             std::string line = text[y_offset];
             renderer.putString(currentLineGlobalPos, line, defaultAttributes);
         }
@@ -407,8 +459,8 @@ public:
             std::vector<std::string> nodeText) : NodeUI(nodeName, nodePosition, nodeText), 
             text_attributes(Color::getColorAttribute(textColorName)), background_attributes(Color::getBackgroundColorAttribute(backgroundColorName)) {}
 
-    std::string getType() const override {
-        return "NodePCT";
+    NodeType getType() const override {
+        return NodeType::NODEPCT;
     }
 
    void draw(ConsoleRenderer& renderer) override {
@@ -416,7 +468,7 @@ public:
         WORD combinedAttributes = text_attributes | background_attributes;
 
         for (SHORT y_offset = 0; y_offset < static_cast<SHORT>(text.size()); ++y_offset) {
-            COORD currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
+            COORD currentLineGlobalPos = (globalPos + COORD{0, y_offset});
             std::string line = text[y_offset];
             renderer.putString(currentLineGlobalPos, line, combinedAttributes);
         }
@@ -433,16 +485,16 @@ protected:
     std::function<void()> onClick;
 
 public:
-    void update() override {
+    void update(double deltaTime) override {
         updateHover(Input::MousePos);
         handleClick();
-        Node::update(); 
+        Node::update(deltaTime); 
     }
     NodeButton(const std::string& nodeName, COORD nodePosition, std::string textColor, std::string backgroundColor, std::vector<std::string> nodeText) : 
         NodePCT(nodeName, nodePosition, textColor, backgroundColor, nodeText) {}
 
-    std::string getType() const override {
-        return "NodeButton";
+    NodeType getType() const override {
+        return NodeType::NODEBUTTON;
     }
     bool is_hovered(){
         return hovered;
@@ -469,7 +521,7 @@ public:
         WORD combinedAttributes = currentTextAttrs | currentBgAttrs;
 
         for (SHORT y_offset = 0; y_offset < static_cast<SHORT>(text.size()); ++y_offset) {
-            COORD currentLineGlobalPos = addCoords(globalPos, {0, y_offset});
+            COORD currentLineGlobalPos = (globalPos + COORD{0, y_offset});
             std::string line = text[y_offset];
             
             renderer.putString(currentLineGlobalPos, line, combinedAttributes);
@@ -478,4 +530,148 @@ public:
     }
 };
 
+class SceneManager {
+    private:
+        std::shared_ptr<Node> root_node = nullptr; 
+    
+        bool is_running = false; 
+        SceneManager() = default;
+    
+        LARGE_INTEGER m_qpf;             // Frecuencia del contador (Hz)
+        LARGE_INTEGER m_lastTime;        // Tiempo en el frame anterior
+        double m_deltaTime = 0.0;        // Último Delta Time (en segundos)
+
+        unsigned long int frameCount;
+
+    public:
+        static SceneManager& getInstance(){
+            static SceneManager instance;
+            return instance;
+        }
+    
+        void processScene() {
+            // 1. Cálculo de Delta Time
+            LARGE_INTEGER currentTime;
+            QueryPerformanceCounter(&currentTime);
+
+            double timeElapsed = (double)(currentTime.QuadPart - m_lastTime.QuadPart) / m_qpf.QuadPart;
+            m_deltaTime = timeElapsed;
+            m_lastTime = currentTime;
+
+
+            if (!root_node) return;
+            root_node->update(timeElapsed);
+        }
+    
+        void changeScene(std::shared_ptr<Node> newRoot) {
+            if (newRoot == root_node) return;
+    
+            if (root_node) {
+                root_node->exitTree();
+            }
+    
+            root_node = newRoot;
+    
+            if (root_node) { 
+                root_node->enterTree();
+            }
+        }
+    
+        void startRunning() {
+            this->is_running = true;
+            //Inicializar el Contador de Rendimiento
+            if (!QueryPerformanceFrequency(&m_qpf)) {
+                m_qpf.QuadPart = 0;
+            }
+            // Obtener el tiempo inicial
+            QueryPerformanceCounter(&m_lastTime);
+
+            Input::iniciateInput();
+
+            ConsoleRenderer renderer = ConsoleRenderer({80, 60});
+            while (this->is_running) {
+        
+                if (this->is_running && this->root_node) {
+
+                    renderer.clearBuffer();
+                    Input::refresh_input();
+
+                    this->processScene();
+                    this->root_node->draw(renderer);
+                    renderer.present();
+                    increaseFrameCount();
+
+                }
+                // Sleep(50);
+            }
+        }
+    
+        void stopRunning() {
+            this->is_running = false;
+        }
+
+        unsigned long int getFrameCount() const{
+            return frameCount;
+        }
+
+        void increaseFrameCount(){
+            frameCount++;
+        }
+};
+
 //FIN DEL CODIGO DEL MOTOR
+//Pruebas
+
+std::shared_ptr<Node2D> otherScene(){
+    std::shared_ptr<Node2D> root = std::make_shared<Node2D>("Boni", COORD{5, 5});
+    std::shared_ptr<NodePCT> label = std::make_shared<NodePCT>(
+        "Label", COORD{1, 1}, Color::COLOR_BLACK, Color::COLOR_BRIGHT_CYAN, std::vector<std::string>{"FPS:         "});
+    root->addChild(label);
+    return root;
+}
+
+std::shared_ptr<Node> basicScene(SceneManager& manager){
+    std::shared_ptr<Node> root = std::make_shared<Node>("Holi");
+    std::shared_ptr<NodePCT> label = std::make_shared<NodePCT>(
+        "Label", COORD{1, 1}, Color::COLOR_BLACK, Color::COLOR_BRIGHT_CYAN, std::vector<std::string>{"FPS:         "});
+    root->addChild(label);
+    
+    std::string* Msg = new std::string("Hola");
+
+    label->setProcessFunction([label, &manager, Msg](double deltaTime){
+        label->set_text(std::vector<std::string>{
+            "Frames: " + std::to_string(manager.getFrameCount()),
+            "FPS: " + std::to_string(1/deltaTime),
+            *Msg});
+    });
+
+    std::shared_ptr<NodeButton> labru = std::make_shared<NodeButton>(
+        "LaFacia", COORD{5, 9}, Color::COLOR_BLUE, Color::COLOR_BLACK, std::vector<std::string>{"Boni      "});
+    root->addChild(labru);
+
+    labru->setOnClick([&manager, Msg, label](){
+
+        SetConsoleCursorPosition(Input::hStdout, label->getGlobalPosition() + COORD{0, 2});
+        CONSOLE_CURSOR_INFO cursorInfo;
+        GetConsoleCursorInfo(Input::hStdout, &cursorInfo);
+        cursorInfo.bVisible = TRUE;
+        SetConsoleCursorInfo(Input::hStdout, &cursorInfo);
+
+        // std::cin >> *Msg;
+        std::getline(std::cin, *Msg);
+        cursorInfo.bVisible = FALSE; // para mostrar
+        SetConsoleCursorInfo(Input::hStdout, &cursorInfo);
+
+        // manager.changeScene(otherScene());
+    });
+    return root;
+}
+
+
+
+int main(){
+    SceneManager manager = SceneManager::getInstance();
+    std::shared_ptr<Node> root = basicScene(manager);
+    manager.changeScene(root);
+    manager.startRunning();
+}
