@@ -93,6 +93,44 @@ namespace Input{
         }
     }
 
+    template<typename T>
+    T getTypedInput(COORD position = {0, 0}){
+        T input;
+        SetConsoleCursorPosition(Input::hStdout, position);
+        
+        CONSOLE_CURSOR_INFO cci;
+        cci.dwSize = 1;
+        cci.bVisible = TRUE;
+
+        SetConsoleCursorInfo(Input::hStdout, &cci);
+        std::cin >> input;
+        // std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        cci.bVisible = FALSE;
+        SetConsoleCursorInfo(Input::hStdout, &cci);
+
+
+        return input;
+    }
+
+    std::string getLineInput(COORD position = {0, 0}){
+        std::string input;
+        SetConsoleCursorPosition(Input::hStdout, position);
+        
+        CONSOLE_CURSOR_INFO cci;
+        cci.dwSize = 1;
+        cci.bVisible = TRUE;
+
+        SetConsoleCursorInfo(Input::hStdout, &cci);
+        std::getline(std::cin, input);
+
+        cci.bVisible = FALSE;
+        SetConsoleCursorInfo(Input::hStdout, &cci);
+
+        return input;
+    }
+    
+
 };
 
 namespace Color {
@@ -650,17 +688,7 @@ std::shared_ptr<Node> basicScene(SceneManager& manager){
     root->addChild(labru);
 
     labru->setOnClick([&manager, Msg, label](){
-
-        SetConsoleCursorPosition(Input::hStdout, label->getGlobalPosition() + COORD{0, 2});
-        CONSOLE_CURSOR_INFO cursorInfo;
-        GetConsoleCursorInfo(Input::hStdout, &cursorInfo);
-        cursorInfo.bVisible = TRUE;
-        SetConsoleCursorInfo(Input::hStdout, &cursorInfo);
-
-        // std::cin >> *Msg;
-        std::getline(std::cin, *Msg);
-        cursorInfo.bVisible = FALSE; // para mostrar
-        SetConsoleCursorInfo(Input::hStdout, &cursorInfo);
+        *Msg = Input::getTypedInput<std::string>(label->getGlobalPosition() + COORD{0, 2});
 
         // manager.changeScene(otherScene());
     });
