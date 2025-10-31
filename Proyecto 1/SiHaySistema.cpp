@@ -125,3 +125,54 @@ struct Hospital {
     LinkedList<Appointment*> appointments;
 };
 
+
+std::shared_ptr<Node> createMainMenu(SceneManager manager, Hospital &hospital){
+    (void) manager;
+    //Declarar Nodos
+    std::shared_ptr<Node> root = std::make_shared<Node>("Root");
+
+    std::shared_ptr<Node2D> headersContainer = std::make_shared<Node2D>("headersContainer", COORD{1, 1});
+
+    std::shared_ptr<NodePCT> hospitalName = std::make_shared<NodePCT>("name", COORD{0,0}, Color::BRIGHT_WHITE, Color::BLACK, std::vector<std::string>{
+        hospital.name,
+        hospital.address
+    });
+
+    std::shared_ptr<Node2D> buttonsContainer = std::make_shared<Node2D>("buttonContainer", COORD{5, 10});
+    
+    std::shared_ptr<NodeButton> pacientsButton = std::make_shared<NodeButton>("pacientsButton", COORD{0, 0}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
+        ".-----------.",
+        "| Pacientes |",
+        "'-----------'"});
+    std::shared_ptr<NodeButton> doctorsButton = std::make_shared<NodeButton>("doctorsButton", COORD{20, 0}, Color::CYAN, Color::BLACK, std::vector<std::string>{
+        ".-----------.",
+        "|  Doctors  |",
+        "'-----------'"});
+    std::shared_ptr<NodeButton> appointmentsButton = std::make_shared<NodeButton>("appointmentsButton", COORD{40, 0}, Color::RED, Color::BLACK, std::vector<std::string>{
+        ".-----------.",
+        "|   Citas   |",
+        "'-----------'"});
+
+    //Armar el arbol
+    root->addChild(headersContainer);
+        headersContainer->addChild(hospitalName);
+        
+    root->addChild(buttonsContainer);
+        buttonsContainer->addChild(pacientsButton);
+        buttonsContainer->addChild(doctorsButton);
+        buttonsContainer->addChild(appointmentsButton);
+
+
+    return root;
+}
+
+int main(){
+    Hospital hospital;
+    strcpy(hospital.name, "HOLAMUNDO");
+    strcpy(hospital.address, "ALGUNAPARTE");
+
+    SceneManager manager = SceneManager::getInstance();
+    auto root = createMainMenu(manager, hospital);
+    manager.changeScene(root);
+    manager.startRunning();
+}
