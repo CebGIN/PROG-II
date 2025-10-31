@@ -129,26 +129,24 @@ namespace Input{
 
         return input;
     }
-    
-
 };
 
 namespace Color {
-    const std::string COLOR_RED = "RED";
-    const std::string COLOR_GREEN = "GREEN";
-    const std::string COLOR_BLUE = "BLUE";
-    const std::string COLOR_YELLOW = "YELLOW";
-    const std::string COLOR_CYAN = "CYAN";
-    const std::string COLOR_MAGENTA = "MAGENTA";
-    const std::string COLOR_WHITE = "WHITE";
-    const std::string COLOR_BLACK = "BLACK";
-    const std::string COLOR_BRIGHT_RED = "BRIGHT_RED";
-    const std::string COLOR_BRIGHT_GREEN = "BRIGHT_GREEN";
-    const std::string COLOR_BRIGHT_BLUE = "BRIGHT_BLUE";
-    const std::string COLOR_BRIGHT_YELLOW = "BRIGHT_YELLOW";
-    const std::string COLOR_BRIGHT_CYAN = "BRIGHT_CYAN";
-    const std::string COLOR_BRIGHT_MAGENTA = "BRIGHT_MAGENTA";
-    const std::string COLOR_BRIGHT_WHITE = "BRIGHT_WHITE";
+    const std::string RED = "RED";
+    const std::string GREEN = "GREEN";
+    const std::string BLUE = "BLUE";
+    const std::string YELLOW = "YELLOW";
+    const std::string CYAN = "CYAN";
+    const std::string MAGENTA = "MAGENTA";
+    const std::string WHITE = "WHITE";
+    const std::string BLACK = "BLACK";
+    const std::string BRIGHT_RED = "BRIGHT_RED";
+    const std::string BRIGHT_GREEN = "BRIGHT_GREEN";
+    const std::string BRIGHT_BLUE = "BRIGHT_BLUE";
+    const std::string BRIGHT_YELLOW = "BRIGHT_YELLOW";
+    const std::string BRIGHT_CYAN = "BRIGHT_CYAN";
+    const std::string BRIGHT_MAGENTA = "BRIGHT_MAGENTA";
+    const std::string BRIGHT_WHITE = "BRIGHT_WHITE";
 
     WORD getColorAttribute(const std::string& colorName) {
         if (colorName == "RED") return FOREGROUND_RED;
