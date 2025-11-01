@@ -484,6 +484,46 @@ public:
     COORD getSize() const { return size; }
 };
 
+class NodeSQ : public Node2D{
+protected:
+    COORD size;
+    WORD text_attributes;
+    WORD background_attributes;
+public:
+    NodeSQ(const std::string& nodeName, COORD nodePosition, COORD nodeSize,
+        const std::string& textColorName, const std::string& backgroundColorName) : Node2D(nodeName, nodePosition), 
+        size(nodeSize), text_attributes(Color::getColorAttribute(textColorName)), background_attributes(Color::getBackgroundColorAttribute(backgroundColorName)) {}
+    
+    COORD getSize() const{
+        return size;
+    }
+    
+    void setSize(COORD newSize = {1, 1}) {
+        size = newSize;
+    }
+
+    void draw(ConsoleRenderer& renderer) override {
+        COORD globalPos = getGlobalPosition();
+        WORD combinedAttributes = text_attributes | background_attributes;
+
+        for (SHORT j = 1; j < static_cast<SHORT>(size.Y -1); ++j){
+            renderer.putChar(globalPos + COORD{0, j}, L'|', combinedAttributes);
+        }
+        for (SHORT j = 1; j < static_cast<SHORT>(size.Y -1); ++j){
+            renderer.putChar(globalPos + COORD{static_cast<SHORT>(size.X - 1), j}, L'|', combinedAttributes);
+        }
+
+        for(SHORT i = 0; i < size.X; ++i){
+            renderer.putChar(globalPos + COORD{i, 0}, L'-', combinedAttributes);
+        }
+        for(SHORT i = 0; i < size.X; ++i){
+            renderer.putChar(globalPos + COORD{i, static_cast<SHORT>(size.Y - 1)}, L'-', combinedAttributes);
+        }
+
+        Node::draw(renderer); // Propagate to children
+    }
+};
+
 class NodePCT : public NodeUI{
 protected:
     WORD text_attributes;
@@ -624,7 +664,7 @@ class SceneManager {
 
             Input::iniciateInput();
 
-            ConsoleRenderer renderer = ConsoleRenderer({80, 60});
+            ConsoleRenderer renderer = ConsoleRenderer({100, 60});
             while (this->is_running) {
         
                 if (this->is_running && this->root_node) {
