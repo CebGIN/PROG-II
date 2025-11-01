@@ -20,6 +20,20 @@ class LinkedList{
     int size = 0;
     ListElement<T>* start;
     ListElement<T>* end;
+
+    private:
+    ListElement<T>* getListElement(int idx) const { 
+        if (idx < 0 || idx >= size) {
+            assert(false && "Out of range index");
+        }
+    
+        ListElement<T>* current = start;
+        for (int i = 0; i < idx; ++i){
+            current = current->next;
+        }
+        return current;
+    }
+
     public:
     LinkedList() : size(0), start(nullptr), end(nullptr) {}
 
@@ -37,6 +51,46 @@ class LinkedList{
             current = current->next;
         }
         return current->value;
+    }
+
+    void remove_at(int idx){
+        if (idx < 0 || idx >= size) assert(false && "Out of range index");
+
+        if (size == 1) {
+            delete start;
+            start = nullptr;
+            end = nullptr;
+            --size;
+            return;
+        }
+
+        if (idx == 0) {
+            ListElement<T>* next_node = start->next;
+            delete start;
+            start = next_node;
+            start->prev = nullptr;
+            
+            --size;
+            return;
+        }
+
+        if (idx == (size-1)){
+            ListElement<T>* behind = end->prev;
+            delete end;
+            end = behind;
+            end->next = nullptr;
+            --size;
+            return;
+        }
+        
+        ListElement<T>* element = getListElement(idx);
+        ListElement<T>* behind = element->prev;
+        ListElement<T>* next = element->next;
+        behind->next = next;
+        next->prev = behind;
+        
+        delete element;
+        --size;
     }
 
     void push_back(const T& value) {
@@ -156,7 +210,7 @@ std::shared_ptr<Node> createMainMenu(SceneManager manager, Hospital &hospital){
     //Armar el arbol
     root->addChild(headersContainer);
         headersContainer->addChild(hospitalName);
-        
+
     root->addChild(buttonsContainer);
         buttonsContainer->addChild(pacientsButton);
         buttonsContainer->addChild(doctorsButton);
