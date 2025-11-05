@@ -305,6 +305,7 @@ public:
         if (childNode) {
             Children.push_back(childNode);
             childNode->setParent(shared_from_this());
+            if (its_in_the_tree) childNode->enterTree();
         } 
         // else {
         //     std::cerr << "Warning: Attempted to add a null shared_ptr child node." << std::endl;
@@ -360,6 +361,22 @@ public:
             process = func;
         } else {
             process = [](double){}; 
+            // std::cerr << "Warning: Attempted to set a null process function for Node '" << name << "'." << std::endl;
+        }
+    }
+    void setAtEnterFunction(std::function<void()> func) {
+        if (func) {
+            atEnterTree = func;
+        } else {
+            atEnterTree = [](){}; 
+            // std::cerr << "Warning: Attempted to set a null process function for Node '" << name << "'." << std::endl;
+        }
+    }
+    void setAtExitFunction(std::function<void()> func) {
+        if (func) {
+            atExitTree = func;
+        } else {
+            atExitTree = [](){}; 
             // std::cerr << "Warning: Attempted to set a null process function for Node '" << name << "'." << std::endl;
         }
     }
@@ -497,9 +514,17 @@ public:
     COORD getSize() const{
         return size;
     }
-    
+
     void setSize(COORD newSize = {1, 1}) {
         size = newSize;
+    }
+
+    void changeTextColor(const std::string& textColorName){
+        text_attributes = Color::getColorAttribute(textColorName);
+    }
+
+    void changeBackgroundColor(const std::string& backgroundColorName){
+        background_attributes = Color::getBackgroundColorAttribute(backgroundColorName);
     }
 
     void draw(ConsoleRenderer& renderer) override {
@@ -550,6 +575,14 @@ public:
         }
 
         Node::draw(renderer); // Propagate to children
+    }
+
+    void changeTextColor(const std::string& textColorName){
+        text_attributes = Color::getColorAttribute(textColorName);
+    }
+
+    void changeBackgroundColor(const std::string& backgroundColorName){
+        background_attributes = Color::getBackgroundColorAttribute(backgroundColorName);
     }
 };
 
