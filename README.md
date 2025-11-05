@@ -1,5 +1,5 @@
 # PROG II
-🔥Repositorio con el contenido referente a la matería programación II🔥
+Repositorio con el contenido referente a la matería programación II
 
 ### Contenidos por clase:
 
@@ -14,7 +14,7 @@
    - Uso de `fstream` para operaciones de entrada y salida.
    - Ejercicios prácticos con archivos.
 
-3. **Clase 3 - Archivos Binarios**:
+3. **Clase 3 - Archivos Binarios (Not human readable)**:
    - Escritura y lectura de archivos binarios.
    - Acceso aleatorio a archivos.
    - Implementación de menús para operaciones de archivos.
