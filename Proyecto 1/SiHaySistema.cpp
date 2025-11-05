@@ -21,6 +21,8 @@ class LinkedList{
     ListElement<T>* start;
     ListElement<T>* end;
 
+    ListElement<T>* nextIteration;
+
     private:
     ListElement<T>* getListElement(int idx) const { 
         if (idx < 0 || idx >= size) {
@@ -53,6 +55,15 @@ class LinkedList{
         return current->value;
     }
 
+    T getStart() const { 
+        return start->value;
+    }
+
+    T getEnd() const { 
+        return end->value;
+    }
+
+
     void remove_at(int idx){
         if (idx < 0 || idx >= size) assert(false && "Out of range index");
 
@@ -82,7 +93,7 @@ class LinkedList{
             --size;
             return;
         }
-        
+
         ListElement<T>* element = getListElement(idx);
         ListElement<T>* behind = element->prev;
         ListElement<T>* next = element->next;
@@ -106,6 +117,17 @@ class LinkedList{
         }
         size++;
     }
+
+    void reset_iteration(){
+        nextIteration = start;
+    }
+    T get_iteration(){
+        return nextIteration->value;
+    }
+    void continue_iteration(){
+        nextIteration = nextIteration->next;
+    }
+
 };
 
 struct Appointment {
@@ -179,9 +201,127 @@ struct Hospital {
     LinkedList<Appointment*> appointments;
 };
 
+std::shared_ptr<Node2D> createPatientCard(COORD position, Patient *patient){
+    Patient *localPatient = new Patient(*patient);
 
-std::shared_ptr<Node> createMainMenu(SceneManager manager, Hospital &hospital){
+    auto root = std::make_shared<Node2D>("pivot", position);
+    auto label = std::make_shared<NodeUI>("label", COORD{2, 1}, std::vector<std::string>{
+        "Paciente N:" + std::to_string(localPatient->id),
+        "Nombre: "    + std::string(localPatient->firstName),
+        "  __________________________________________________.     ",
+        "Apellido: "  + std::string(localPatient->lastName),
+        "  __________________________________________________.     "});
+
+    std::shared_ptr<NodeButton> saveChanges = std::make_shared<NodeButton>("saveChanges", COORD{42, 100}, Color::BLUE, Color::BLACK, std::vector<std::string>{
+        ".---------.",
+        "| Guardar |",
+        "'---------'"});
+    saveChanges->setOnClick([localPatient, patient, saveChanges](){
+        strcpy(patient->firstName, localPatient->firstName);
+        strcpy(patient->lastName, localPatient->lastName);
+        saveChanges->setLocalPosition(COORD{42, 100});
+    });
+
+    auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 10}, Color::WHITE, Color::BLACK);
+    auto editName = std::make_shared<NodeButton>("editName", COORD{0, 2}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+        editName->setOnClick([localPatient, editName, label, saveChanges](){
+            strncpy(localPatient->firstName, (Input::getLineInput(editName->getGlobalPosition() + COORD{6, 0})).c_str(), 50);
+            label->set_text(std::vector<std::string>{
+                "Paciente N:" + std::to_string(localPatient->id),
+                "Nombre: "    + std::string(localPatient->firstName),
+                "       __________________________________________________.",
+                "Apellido: "  + std::string(localPatient->lastName),
+                "  __________________________________________________.     "});
+            saveChanges->setLocalPosition(COORD{42, 6});
+        });
+    auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{0, 4}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[]"});
+    // auto editName = std::make_shared<NodeButton>("editName", COORD{-1, 0}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[]"});
+
+
+
+    root->addChild(square);
+    root->addChild(label);
+        label->addChild(editName);
+        label->addChild(editLastname);
+    root->addChild(saveChanges);
+
+    return root;
+}
+
+std::shared_ptr<Node> createPatientMenu(SceneManager &manager, std::shared_ptr<Node> mainMenu, LinkedList<Patient*> &patients){
+    std::shared_ptr<Node> root = std::make_shared<Node>("Root");
+
+    std::shared_ptr<Node2D> cardCont = std::make_shared<Node2D>("cardCont", COORD{0, 10});
+
+    LinkedList<std::shared_ptr<Node2D>> *cards = new LinkedList<std::shared_ptr<Node2D>>();
+
+    patients.reset_iteration();
+    for (int i = 0; i < patients.get_size(); i++){
+        cards->push_back(createPatientCard({SHORT(i*65), 0}, patients.get_iteration() ) ) ;
+        patients.continue_iteration();
+    }
+
+    std::shared_ptr<NodeButton> mainMenuButton = std::make_shared<NodeButton>("mainMenuButton", COORD{0, 0}, Color::RED, Color::BLACK, std::vector<std::string>{
+        ".----------------.",
+        "| Menu principal |",
+        "'----------------'"});
+    mainMenuButton->setOnClick([mainMenu, &manager](){
+        manager.changeScene(mainMenu);
+    });
+
+    std::shared_ptr<NodeButton> createPatient = std::make_shared<NodeButton>("createPatient", COORD{20, 0}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
+        ".-------.",
+        "| Nuevo |",
+        "'-------'"});
+    createPatient->setOnClick([cardCont, &patients, cards](){
+        Patient* newPatient = new Patient();
+        newPatient->id = patients.get_size();
+        patients.push_back(newPatient);
+        cards->push_back( createPatientCard( { SHORT( cards->get_size() * 65 ), 0 } , newPatient ) );
+        cardCont->addChild(cards->getEnd());
+    });
+
+    // root->setProcessFunction([cards](double){
+        
+    // });
+
+    root->setAtExitFunction([cards](){
+        delete cards;
+    });
+
+    std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("appointmentsButton", COORD{0, 5}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
+        "|/////|",});
+    std::shared_ptr<NodeSQ> sliderline = std::make_shared<NodeSQ>("Line", COORD{0, 5}, COORD{100, 1}, Color::BRIGHT_YELLOW, Color::BLACK);
+    
+    slider->setProcessFunction([slider, cardCont, cards](double){
+        SHORT limit = 100;
+        int amount = cards->get_size() - 1;
+        static bool moving;
+
+        if (Input::MousePos.Y == slider->getGlobalPosition().Y && Input::LClickJustPressed) moving = true;
+        if (!Input::LClick) moving = false;
+
+        if (moving)
+            slider->setGlobalPosition({std::min(Input::MousePos.X, SHORT(limit - 7)), slider->getGlobalPosition().Y});
+
+        float progress = (slider->getGlobalPosition().X / float(limit));
+        cardCont->setGlobalPosition({SHORT(-progress * (amount * 65 + 40)), cardCont->getGlobalPosition().Y});
+    });
+
+    root->addChild(mainMenuButton);
+    root->addChild(createPatient);
+    root->addChild(cardCont);
+        cards->reset_iteration();
+        for (int i = 0; i < patients.get_size(); i++) { cardCont->addChild(cards->get_iteration()); cards->continue_iteration();}
+    root->addChild(sliderline);
+    root->addChild(slider);
+
+    return root;
+}
+
+std::shared_ptr<Node> createMainMenu(SceneManager &manager, Hospital &hospital){
     (void) manager;
+
     //Declarar Nodos
     std::shared_ptr<Node> root = std::make_shared<Node>("Root");
 
@@ -192,12 +332,15 @@ std::shared_ptr<Node> createMainMenu(SceneManager manager, Hospital &hospital){
         hospital.address
     });
 
-    std::shared_ptr<Node2D> buttonsContainer = std::make_shared<Node2D>("buttonContainer", COORD{5, 10});
+    std::shared_ptr<Node2D> buttonsContainer = std::make_shared<Node2D>("buttonContainer", COORD{5, 6});
     
     std::shared_ptr<NodeButton> pacientsButton = std::make_shared<NodeButton>("pacientsButton", COORD{0, 0}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
         ".-----------.",
         "| Pacientes |",
         "'-----------'"});
+    pacientsButton->setOnClick([&manager, root, &hospital](){
+        manager.changeScene(createPatientMenu(manager, root, hospital.patients));
+    });
     std::shared_ptr<NodeButton> doctorsButton = std::make_shared<NodeButton>("doctorsButton", COORD{20, 0}, Color::CYAN, Color::BLACK, std::vector<std::string>{
         ".-----------.",
         "|  Doctors  |",
@@ -206,16 +349,20 @@ std::shared_ptr<Node> createMainMenu(SceneManager manager, Hospital &hospital){
         ".-----------.",
         "|   Citas   |",
         "'-----------'"});
+    
+    
+    // std::shared_ptr<NodeButton> dragableButton = std::make_shared<NodeButton>("appointmentsButton", COORD{30, 10}, Color::RED, Color::BLACK, std::vector<std::string>{
+    //     ".----------.",
+    //     "|   Drag   |",
+    //     "'----------'"});
 
     //Armar el arbol
     root->addChild(headersContainer);
         headersContainer->addChild(hospitalName);
-
     root->addChild(buttonsContainer);
         buttonsContainer->addChild(pacientsButton);
         buttonsContainer->addChild(doctorsButton);
         buttonsContainer->addChild(appointmentsButton);
-
 
     return root;
 }
