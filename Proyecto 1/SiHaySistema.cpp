@@ -544,6 +544,71 @@ std::shared_ptr<Node> createDoctorMenu(SceneManager &manager, std::shared_ptr<No
     return root;
 }
 
+std::shared_ptr<Node2D> createDoctorCard(COORD position, Doctor *doctorPTR, LinkedList<Doctor*> &doctors, ListElement<Doctor*> *doctorLEPTR){
+    Doctor *localDoctorPTR = new Doctor(*doctorPTR);
+
+    auto root = std::make_shared<Node2D>("pivot", position);
+
+    root->setAtExitFunction([localDoctorPTR](){delete localDoctorPTR;});
+
+    auto label = std::make_shared<NodeUI>("label", COORD{2, 1}, std::vector<std::string>{
+        "Doctor N:" + std::to_string(localDoctorPTR->id),
+        "Nombre: "    + std::string(localDoctorPTR->firstName),
+        "  __________________________________________________.     ",
+        "Apellido: "  + std::string(localDoctorPTR->lastName),
+        "  __________________________________________________.     "});
+
+    std::shared_ptr<NodeButton> saveChanges = std::make_shared<NodeButton>("saveChanges", COORD{50, 100}, Color::BLUE, Color::BLACK, std::vector<std::string>{
+        ".---------.",
+        "| Guardar |",
+        "'---------'"});
+    saveChanges->setOnClick([localDoctorPTR, doctorPTR, saveChanges](){
+        strcpy(doctorPTR->firstName, localDoctorPTR->firstName);       
+        strcpy(doctorPTR->lastName, localDoctorPTR->lastName);         
+        saveChanges->setLocalPosition(COORD{42, 100});             
+    });
+    
+    std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([doctorPTR, &doctors, doctorLEPTR, root](){
+        //Nota: localPatient sera elminado en exitTree siempre
+        delete doctorPTR;
+        doctors.remove_LE(doctorLEPTR);
+        root->setLocalPosition({0, 100});
+    });
+    
+    std::shared_ptr<NodeButton> deleteDoctor = std::make_shared<NodeButton>("deletePatient", COORD{59, 1}, Color::RED, Color::BLACK, std::vector<std::string>{"X"});
+    deleteDoctor->setOnClick([confirmDelete](){
+        confirmDelete->setGlobalPosition(COORD{25, 8});
+    });
+
+    auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 10}, Color::WHITE, Color::BLACK);
+    auto editName = std::make_shared<NodeButton>("editName", COORD{0, 2}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editName->setOnClick([localDoctorPTR, editName, label, saveChanges](){
+        strncpy(localDoctorPTR->firstName, (Input::getLineInput(editName->getGlobalPosition() + COORD{6, 0})).c_str(), 50);
+        std::vector<std::string> labelText = label->getText();
+        labelText[1] = "Nombre: "    + std::string(localDoctorPTR->firstName);
+        label->set_text(labelText);
+        saveChanges->setLocalPosition(COORD{42, 6});
+    });
+    auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{0, 4}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editLastname->setOnClick([localDoctorPTR, editLastname, label, saveChanges](){
+        strncpy(localDoctorPTR->lastName, (Input::getLineInput(editLastname->getGlobalPosition() + COORD{6, 0})).c_str(), 50);
+        std::vector<std::string> labelText = label->getText();
+        labelText[3] = "Nombre: "    + std::string(localDoctorPTR->lastName);
+        label->set_text(labelText);
+        saveChanges->setLocalPosition(COORD{42, 6});
+    });
+
+    root->addChild(square);
+    root->addChild(label);
+        label->addChild(editName);
+        label->addChild(editLastname);
+    root->addChild(saveChanges);
+    root->addChild(deleteDoctor);
+    root->addChild(confirmDelete);
+
+    return root;
+}
+
 int main(){
     Hospital hospital;
     strcpy(hospital.name, "HOLAMUNDO");
