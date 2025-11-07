@@ -39,6 +39,10 @@ class LinkedList{
     public:
     LinkedList() : size(0), start(nullptr), end(nullptr) {}
 
+    ~LinkedList() {
+        clear();
+    }
+
     int get_size() const {
         return size;
     }
@@ -66,14 +70,21 @@ class LinkedList{
     ListElement<T>* getEndLE(){
         return end;
     }
-    //Precaucion, asume sin comprobar que el ListElement forma parte de esta lista.
+
     void remove_LE(ListElement<T>* elementPTR){
+        if (elementPTR == start) {
+            start = elementPTR->next;
+        }
+        if (elementPTR == end) {
+            end = elementPTR->prev;
+        }
+
         ListElement<T>* behind = elementPTR->prev;
         ListElement<T>* next = elementPTR->next;
         if(behind != nullptr) behind->next = next;
         if(next != nullptr) next->prev = behind;
         delete elementPTR;
-        --size; 
+        --size;//Precaucion, asume sin comprobar que el ListElement forma parte de esta lista.
     }
 
     void remove_at(int idx){
@@ -152,6 +163,21 @@ class LinkedList{
         nextIteration = nextIteration->next;
     }
 
+    void clear() {
+        ListElement<T>* current = start;
+        ListElement<T>* next_node = nullptr;
+    
+        while (current != nullptr) {
+            next_node = current->next;
+            delete current;
+            current = next_node;
+        }
+        
+        start = nullptr;
+        end = nullptr;
+        nextIteration = nullptr;
+        size = 0;
+    }
 };
 
 struct Appointment {
@@ -229,7 +255,22 @@ struct Hospital {
 
 std::shared_ptr<NodeSQ> confirmDialog(std::function<void()> onConfirm){
     std::shared_ptr<NodeSQ> square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 100}, COORD{27, 6}, Color::RED, Color::RED);
-    std::shared_ptr<NodePCT> label = std::make_shared<NodePCT>("label", COORD{1, 1}, Color::BLACK, Color::RED, std::vector<std::string>{"         Seguro?         "});
+    std::shared_ptr<NodeButton> label = std::make_shared<NodeButton>("label", COORD{1, 1}, Color::BLACK, Color::RED, std::vector<std::string>{"         Seguro?         "});
+    
+    bool *move = new bool(false);
+    COORD *offset = new COORD();
+    label->setOnClick([move, offset, square](){
+        *move = true;
+        *offset = (square->getGlobalPosition() - Input::MousePos);
+    });
+    label->setProcessFunction([square, move, offset](double){
+        if(*move){
+            if (!Input::LClick) *move = false;
+            square->setGlobalPosition(Input::MousePos + *offset);
+        }
+    });
+    label->setAtExitFunction([move, offset](){delete move; delete offset;});
+
 
     std::shared_ptr<NodeButton> cancel = std::make_shared<NodeButton>("cancel", COORD{1, 2}, Color::BLACK, Color::RED, std::vector<std::string>{
         ".----------.",
@@ -277,11 +318,11 @@ std::shared_ptr<Node2D> createPatientCard(COORD position, Patient *patientPTR, L
     std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([patientPTR, &patients, patientLEPTR, root](){
         //Nota: localPatient sera elminado en exitTree siempre
         delete patientPTR;
-        patients.remove_LE(patientLEPTR); //Esto elimina el ListElement
-        root->setLocalPosition({0, 100});//Ocultarse
+        patients.remove_LE(patientLEPTR);
+        root->setLocalPosition({0, 100});
     });
     
-    std::shared_ptr<NodeButton> deletePatient = std::make_shared<NodeButton>("deletePatient", COORD{50, 1}, Color::RED, Color::BLACK, std::vector<std::string>{"X"});
+    std::shared_ptr<NodeButton> deletePatient = std::make_shared<NodeButton>("deletePatient", COORD{59, 1}, Color::RED, Color::BLACK, std::vector<std::string>{"X"});
     deletePatient->setOnClick([confirmDelete](){
         confirmDelete->setGlobalPosition(COORD{25, 8});
     });
