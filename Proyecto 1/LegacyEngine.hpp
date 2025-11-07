@@ -476,6 +476,10 @@ public:
         }
     }
 
+    std::vector<std::string> getText(){
+        return text;
+    }
+
     NodeType getType() const override {
         return NodeType::NODEUI;
     }
@@ -672,6 +676,10 @@ class SceneManager {
             root_node->update(timeElapsed);
         }
     
+        std::shared_ptr<Node> getCurrrentScene() {
+            return root_node;
+        }
+
         void changeScene(std::shared_ptr<Node> newRoot) {
             if (newRoot == root_node) return;
     
