@@ -462,6 +462,77 @@ std::shared_ptr<Node>   createMainMenu(SceneManager &manager, Hospital &hospital
     return root;
 }
 
+std::shared_ptr<Node> createDoctorMenu(SceneManager &manager, std::shared_ptr<Node> mainMenu, LinkedList<Doctor*> &doctors){
+    std::shared_ptr<Node> root = std::make_shared<Node>("Root");
+
+    std::shared_ptr<Node2D> cardCont = std::make_shared<Node2D>("cardCont", COORD{0, 10});
+
+    LinkedList<std::shared_ptr<Node2D>> *cards = new LinkedList<std::shared_ptr<Node2D>>();
+
+    doctors.reset_iteration();
+    for (int i = 0; i < doctors.get_size(); i++){
+        //cards->push_back(createDoctorCard({SHORT(i*65), 0}, doctors.get_iteration() ) ) ;
+        doctors.continue_iteration();
+    }
+
+    std::shared_ptr<NodeButton> mainMenuButton = std::make_shared<NodeButton>("mainMenuButton", COORD{0, 0}, Color::RED, Color::BLACK, std::vector<std::string>{
+        ".----------------.",
+        "| Menu principal |",
+        "'----------------'"});
+    mainMenuButton->setOnClick([mainMenu, &manager](){
+        manager.changeScene(mainMenu);
+    });
+
+    std::shared_ptr<NodeButton> createPatient = std::make_shared<NodeButton>("createDoctoor", COORD{20, 0}, Color::CYAN, Color::BLACK, std::vector<std::string>{
+        ".-------.",
+        "| Nuevo |",
+        "'-------'"});
+    createPatient->setOnClick([cardCont, &doctors, cards](){
+        Doctor* newDoctorPTR = new Doctor();
+        newDoctorPTR->id = doctors.get_size();
+        doctors.push_back(newDoctorPTR);
+        //cards->push_back( createPatientCard( { SHORT( cards->get_size() * 65 ), 0 } , newPatient ) );
+        cardCont->addChild(cards->getEnd());
+    });
+
+    // root->setProcessFunction([cards](double){
+        
+    // });
+
+    root->setAtExitFunction([cards](){
+        delete cards;
+    });
+
+    std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("appointmentsButton", COORD{0, 5}, Color::CYAN, Color::BLACK, std::vector<std::string>{
+        "|/////|",});
+    std::shared_ptr<NodeSQ> sliderline = std::make_shared<NodeSQ>("Line", COORD{0, 5}, COORD{100, 1}, Color::BRIGHT_CYAN, Color::BLACK);
+    
+    slider->setProcessFunction([slider, cardCont, cards](double){
+        SHORT limit = 100 - 7;
+        int amount = cards->get_size() - 1;
+        static bool moving;
+
+        if (Input::MousePos.Y == slider->getGlobalPosition().Y && Input::LClickJustPressed) moving = true;
+        if (!Input::LClick) moving = false;
+
+        if (moving)
+            slider->setGlobalPosition({std::min(Input::MousePos.X, SHORT(limit)), slider->getGlobalPosition().Y});
+
+        float progress = (slider->getGlobalPosition().X / float(limit));
+        cardCont->setGlobalPosition({SHORT(-progress * (amount * 65 + 10)), cardCont->getGlobalPosition().Y});
+    });
+
+    root->addChild(mainMenuButton);
+    root->addChild(createPatient);
+    root->addChild(cardCont);
+        cards->reset_iteration();
+        for (int i = 0; i < doctors.get_size(); i++) { cardCont->addChild(cards->get_iteration()); cards->continue_iteration();}
+    root->addChild(sliderline);
+    root->addChild(slider);
+
+    return root;
+}
+
 int main(){
     Hospital hospital;
     strcpy(hospital.name, "HOLAMUNDO");
