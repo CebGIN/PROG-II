@@ -127,6 +127,19 @@ class LinkedList{
         --size;
     }
 
+    void remove_by_value(const T& value){
+        ListElement<T>* current = start;
+        while (current != nullptr) {
+            if (current->value == value) {
+                remove_LE(current);
+                return; // Found and removed, exit function
+            }
+            current = current->next;
+        }
+        // If execution reaches here, the element was not found (not an error if checking multiple lists)
+    }
+
+
     void push_back(const T& value) {
         ListElement<T>* newElement = new ListElement<T>(value, end);
 
@@ -305,7 +318,9 @@ std::shared_ptr<Node> createDoctorMenu(SceneManager &manager, std::shared_ptr<No
 std::shared_ptr<Node2D> createDoctorCard(COORD position, Doctor *doctorPTR, LinkedList<Doctor*> &doctors, ListElement<Doctor*> *doctorLEPTR);
 
 std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actualDoctorPTR, LinkedList<Appointment*> &appointments, std::shared_ptr<Node> mainMenu, SceneManager &manager);
-std:: shared_ptr<Node2D> createAppoinmentCard(COORD position, Appointment *appoinmentPTR, LinkedList<Appointment*> &appoinments, ListElement<Appointment*> *appoinmentLEPTR, Patient*actualPatientPTR, Doctor*actualDoctorPTR, Patient** selectionPatient, Doctor** selectionDoctor, std::shared_ptr<NodeSQ> patientSelector, std::shared_ptr<NodeSQ> doctorSelector);
+std:: shared_ptr<Node2D> createAppoinmentCard(COORD position, Appointment *appoinmentPTR, LinkedList<Appointment*> &appoinments, ListElement<Appointment*> *appoinmentLEPTR, Patient*actualPatientPTR, Doctor*actualDoctorPTR);
+
+
 
 std::shared_ptr<Node> createMainMenu(SceneManager &manager){
     //Declarar Nodos
@@ -442,9 +457,31 @@ std::shared_ptr<Node2D> createPatientCard(SceneManager &manager, std::shared_ptr
         strcpy(patientPTR->lastName, localPatientPTR->lastName);         
         saveChanges->setLocalPosition(COORD{42, 100});             
     });
-    
+
     std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([patientPTR, &patients, patientLEPTR, root](){
-        //Nota: localPatient sera elminado en exitTree siempre
+        // --- 1. Cleanup Appointments (CRITICAL) ---
+        patientPTR->scheduledAppointments.reset_iteration();
+        for (int i = 0; i < patientPTR->scheduledAppointments.get_size(); ++i) {
+            Appointment* appt_to_delete = patientPTR->scheduledAppointments.get_iteration();
+            
+            // Remove from Doctor's scheduled list 
+            if (appt_to_delete->doctorPTR) {
+                appt_to_delete->doctorPTR->scheduledAppointments.remove_by_value(appt_to_delete);
+            }
+            
+            // Remove from the Hospital's global list
+            // hospital.appointments.remove_by_value(appt_to_delete);
+            
+            // Deleting the appointment entity itself
+            delete appt_to_delete; 
+            patientPTR->scheduledAppointments.continue_iteration();
+        }
+        
+        // The Patient's scheduledAppointments list destructor will now safely call clear() 
+        // without deleting the pointers again (since we deleted them above).
+        
+        // --- 2. Cleanup Patient Entity ---
+        // Note: localPatient is deleted in exitTree always
         delete patientPTR;
         patients.remove_LE(patientLEPTR);
         root->setLocalPosition({0, 100});
@@ -584,12 +621,33 @@ std::shared_ptr<Node2D> createDoctorCard(COORD position, Doctor *doctorPTR, Link
         saveChanges->setLocalPosition(COORD{42, 100});             
     });
     
-    std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([doctorPTR, &doctors, doctorLEPTR, root](){
-        //Nota: localPatient sera elminado en exitTree siempre
-        delete doctorPTR;
-        doctors.remove_LE(doctorLEPTR);
-        root->setLocalPosition({0, 100});
-    });
+    // Inside createDoctorCard:
+
+// ...
+std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([doctorPTR, &doctors, doctorLEPTR, root](){
+    // --- 1. Cleanup Appointments (CRITICAL) ---
+    doctorPTR->scheduledAppointments.reset_iteration();
+    for (int i = 0; i < doctorPTR->scheduledAppointments.get_size(); ++i) {
+        Appointment* appt_to_delete = doctorPTR->scheduledAppointments.get_iteration();
+        
+        // Remove from Patient's scheduled list using the new method
+        if (appt_to_delete->patientPTR) {
+            appt_to_delete->patientPTR->scheduledAppointments.remove_by_value(appt_to_delete);
+        }
+        
+        // Remove from the Hospital's global list using the new method
+        hospital.appointments.remove_by_value(appt_to_delete);
+        
+        // Deleting the appointment entity itself
+        delete appt_to_delete; 
+        doctorPTR->scheduledAppointments.continue_iteration();
+    }
+    
+    // --- 2. Cleanup Doctor Entity ---
+    delete doctorPTR;
+    doctors.remove_LE(doctorLEPTR);
+    root->setLocalPosition({0, 100});
+});
     
     std::shared_ptr<NodeButton> deleteDoctor = std::make_shared<NodeButton>("deletePatient", COORD{59, 1}, Color::RED, Color::BLACK, std::vector<std::string>{"X"});
     deleteDoctor->setOnClick([confirmDelete](){
@@ -627,14 +685,30 @@ std::shared_ptr<Node2D> createDoctorCard(COORD position, Doctor *doctorPTR, Link
 
 std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actualDoctorPTR, LinkedList<Appointment*> &appointments, std::shared_ptr<Node> mainMenu, SceneManager &manager){
     std::shared_ptr<Node> root = std::make_shared<Node>("RootAppoinments");
+    
+    // Determine the return scene based on context
+    // This allows navigating back to the Patient Menu or Doctor Menu, not just Main Menu
+    std::shared_ptr<Node> backScene;
+    if (actualPatientPTR) {
+        // If coming from Patient Menu, go back to Patient Menu
+        backScene = createPatientMenu(manager, mainMenu, hospital.patients); 
+    } else if (actualDoctorPTR) {
+        // If coming from Doctor Menu, go back to Doctor Menu
+        backScene = createDoctorMenu(manager, mainMenu, hospital.doctors);
+    } else {
+        // If coming from Main Menu appointments button, go back to Main Menu
+        backScene = mainMenu; 
+    }
+    
     std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BLACK, std::vector<std::string>{
         ".--------.",
         "| Volver |",
         "'--------'"});
-        backButton->setOnClick([&manager, mainMenu](){
-            manager.changeScene(mainMenu);
-        });
+    backButton->setOnClick([&manager, backScene](){
+        manager.changeScene(backScene);
+    });
     
+    // Pointers for selection state (must be cleaned up on scene exit)
     Patient **selectedPatient = new Patient*;
     Doctor **selectedDoctor = new Doctor*;
         
@@ -646,56 +720,111 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
     });
     
     
-
+    // --- PATIENT SELECTOR DIALOG SETUP ---
     std::shared_ptr<NodeSQ> patientSelector = std::make_shared<NodeSQ>("selectPatient", COORD{300, 300}, COORD{26, 40}, Color::YELLOW, Color::YELLOW);
     patientSelector->addChild(std::make_shared<NodePCT>("Boni", COORD{8,0}, Color::BRIGHT_YELLOW, Color::YELLOW, std::vector<std::string>{"Pacientes"}));
+    
     hospital.patients.reset_iteration();
     for(SHORT i = 0; i < hospital.patients.get_size(); ++i){
         Patient* patientPTR = hospital.patients.get_iteration();
+        // Capture patientSelector, cardCont, cards by value/reference for the lambda
         auto patientN = std::make_shared<NodeButton>("px", COORD{(SHORT)1, (SHORT)(i + 1)}, Color::BRIGHT_YELLOW, Color::YELLOW, std::vector<std::string>{patientPTR->firstName});
-        patientN->setOnClick([selectedPatient, patientPTR](){
-            *selectedPatient = patientPTR;
+        patientN->setOnClick([patientPTR, actualDoctorPTR, patientSelector, cardCont, cards, &appointments](){
+            // 1. Create the new Appointment with the selected Patient and the context Doctor
+            Appointment* newAppoinmentPTR = new Appointment();
+            newAppoinmentPTR->id = Patient::nextId++;
+            newAppoinmentPTR->patientPTR = patientPTR;
+            newAppoinmentPTR->doctorPTR = actualDoctorPTR;
+
+            // 2. Add to all necessary lists (Hospital main list, Doctor's list, Patient's list)
+            appointments.push_back(newAppoinmentPTR);
+            if (patientPTR) patientPTR->scheduledAppointments.push_back(newAppoinmentPTR);
+            if (actualDoctorPTR) actualDoctorPTR->scheduledAppointments.push_back(newAppoinmentPTR);
+            
+            // 3. Create and add the UI card
+            cards->push_back( createAppoinmentCard( 
+                COORD{0, SHORT( cards->get_size() * 20 + 4 )}, newAppoinmentPTR, appointments, appointments.getEndLE(), 
+                newAppoinmentPTR->patientPTR, newAppoinmentPTR->doctorPTR ) );
+            cardCont->addChild(cards->getEnd());
+            
+            // 4. Hide the selector
+            patientSelector->setLocalPosition({300, 300}); 
         });
         patientSelector->addChild( patientN );
         hospital.patients.continue_iteration();
     }
 
-    std::shared_ptr<NodeSQ> doctorSelector = std::make_shared<NodeSQ>("selectPatient", COORD{300, 300}, COORD{26, 40}, Color::CYAN, Color::CYAN);
+    // --- DOCTOR SELECTOR DIALOG SETUP ---
+    std::shared_ptr<NodeSQ> doctorSelector = std::make_shared<NodeSQ>("selectDoctor", COORD{300, 300}, COORD{26, 40}, Color::CYAN, Color::CYAN);
     doctorSelector->addChild(std::make_shared<NodePCT>("Boni", COORD{8,0}, Color::BRIGHT_CYAN, Color::CYAN, std::vector<std::string>{"Doctores"}));
+    
     hospital.doctors.reset_iteration();
     for(SHORT i = 0; i < hospital.doctors.get_size(); ++i){
         Doctor* doctorPTR = hospital.doctors.get_iteration();
-        auto doctorN =  std::make_shared<NodeButton>("dx", COORD{(SHORT)1, (SHORT)(i + 1)}, Color::BRIGHT_CYAN, Color::CYAN, std::vector<std::string>{hospital.doctors.get_iteration()->firstName});
-        doctorN->setOnClick([selectedDoctor, doctorPTR](){
-            *selectedDoctor = doctorPTR;
+        // Capture doctorSelector, cardCont, cards by value/reference for the lambda
+        auto doctorN = std::make_shared<NodeButton>("dx", COORD{(SHORT)1, (SHORT)(i + 1)}, Color::BRIGHT_CYAN, Color::CYAN, std::vector<std::string>{doctorPTR->firstName});
+        doctorN->setOnClick([doctorPTR, actualPatientPTR, doctorSelector, cardCont, cards, &appointments](){
+            // 1. Create the new Appointment with the selected Doctor and the context Patient
+            Appointment* newAppoinmentPTR = new Appointment();
+            newAppoinmentPTR->id = Patient::nextId++;
+            newAppoinmentPTR->patientPTR = actualPatientPTR;
+            newAppoinmentPTR->doctorPTR = doctorPTR;
+
+            // 2. Add to all necessary lists (Hospital main list, Doctor's list, Patient's list)
+            appointments.push_back(newAppoinmentPTR);
+            if (actualPatientPTR) actualPatientPTR->scheduledAppointments.push_back(newAppoinmentPTR);
+            if (doctorPTR) doctorPTR->scheduledAppointments.push_back(newAppoinmentPTR);
+            
+            // 3. Create and add the UI card
+            cards->push_back( createAppoinmentCard( 
+                COORD{0, SHORT( cards->get_size() * 20 + 4 )}, newAppoinmentPTR, appointments, appointments.getEndLE(), 
+                newAppoinmentPTR->patientPTR, newAppoinmentPTR->doctorPTR ) );
+            cardCont->addChild(cards->getEnd());
+
+            // 4. Hide the selector
+            doctorSelector->setLocalPosition({300, 300});
         });
         doctorSelector->addChild(doctorN );
         hospital.doctors.continue_iteration();
     }
 
+    // --- CREATE APPOINTMENT BUTTON (Nuevo) ---
     std::shared_ptr<NodeButton> createAppoinment = std::make_shared<NodeButton>("createAppoinment", COORD{20, 0}, Color::GREEN, Color::BLACK, std::vector<std::string>{
         ".-------.",
         "| Nuevo |",
         "'-------'"});
-    createAppoinment->setOnClick([actualPatientPTR, actualDoctorPTR, patientSelector, doctorSelector, selectedPatient, selectedDoctor, cardCont, cards, &appointments](){
-        Appointment* newAppoinmentPTR = new Appointment();
-        newAppoinmentPTR->id = Patient::nextId++;
-        // appointments.push_back(newAppoinmentPTR);
-        if (actualPatientPTR) actualPatientPTR->scheduledAppointments.push_back(newAppoinmentPTR);
-        if (actualDoctorPTR) actualDoctorPTR->scheduledAppointments.push_back(newAppoinmentPTR);
-
-        cards->push_back( createAppoinmentCard( COORD{0, SHORT( cards->get_size() * 20 + 4 )}, newAppoinmentPTR, appointments, appointments.getEndLE(), actualPatientPTR, nullptr, selectedPatient, selectedDoctor, patientSelector, doctorSelector ) );
-        cardCont->addChild(cards->getEnd());
+        
+    createAppoinment->setOnClick([actualPatientPTR, actualDoctorPTR, patientSelector, doctorSelector, cardCont, cards, &appointments](){
+        
+        // If we are in the Patient Menu context, we need to select a Doctor
+        if (actualPatientPTR && !actualDoctorPTR) {
+            doctorSelector->setGlobalPosition(COORD{65, 0}); // Show Doctor Selector
+        } 
+        // If we are in the Doctor Menu context, we need to select a Patient
+        else if (actualDoctorPTR && !actualPatientPTR) {
+            patientSelector->setGlobalPosition(COORD{65, 0}); // Show Patient Selector
+        } 
+        // If we are in the Main Appointments Menu, we need a flow to select BOTH (This is currently complex and would require a secondary selection, but for limited time, we'll keep it simple or require the user to navigate via Patient/Doctor menu)
+        else {
+            // Option 1: For the main Appointments menu, we can default to showing the Patient selector first
+            // or we could show a dialog asking which to select first.
+            patientSelector->setGlobalPosition(COORD{20, 4}); 
+            // NOTE: If both are nullptr, the selection logic inside the dialogs will fail 
+            // because `actualPatientPTR` or `actualDoctorPTR` will be null when creating the appointment.
+            // For now, let's assume creation is primarily done through the Patient/Doctor specific menus.
+        }
     });
 
-    // std::shared_ptr<NodeButton> 
+    // ... (rest of the card display and slider logic remains the same)
 
     appointments.reset_iteration();
     for (int i = 0; i < appointments.get_size(); i++){
-        cards->push_back(createAppoinmentCard({0, SHORT(i*20 + 4)}, appointments.get_iteration(), appointments, appointments.get_iteration_LE(), actualPatientPTR, actualDoctorPTR, selectedPatient, selectedDoctor, patientSelector, doctorSelector) ) ;
+        // Pass the already assigned Pointers from the list, not the scene context pointers
+        Appointment* appPtr = appointments.get_iteration();
+        cards->push_back(createAppoinmentCard({0, SHORT(i*20 + 4)}, appPtr, appointments, appointments.get_iteration_LE(), 
+            appPtr->patientPTR, appPtr->doctorPTR) ) ;
         appointments.continue_iteration();
     }
-
 
     std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("appointmentsButton", COORD{99, 0}, Color::GREEN, Color::GREEN, std::vector<std::string>{
         " ",
@@ -711,19 +840,18 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
         if (Input::MousePos.X == slider->getGlobalPosition().X && Input::LClickJustPressed) moving = true;
         if (!Input::LClick) moving = false;
 
-        if (moving)
-            slider->setGlobalPosition({slider->getGlobalPosition().X, std::min(Input::MousePos.Y, SHORT(limit - 3))});
-
+        if (moving) slider->setGlobalPosition({slider->getGlobalPosition().X, std::min(Input::MousePos.Y, SHORT(limit - 3))});
         float progress = ( slider->getGlobalPosition().Y / float(limit) );
         cardCont->setGlobalPosition({cardCont->getGlobalPosition().X, SHORT( -progress * (amount * 65) )});
     });
-    
+   
+
     root->addChild(createAppoinment);
     root->addChild(cardCont);
-    root->addChild(sliderline);
-    root->addChild(slider);
     cards->reset_iteration();
     for (int i = 0; i < appointments.get_size(); i++) { cardCont->addChild(cards->get_iteration()); cards->continue_iteration();}
+    root->addChild(sliderline);
+    root->addChild(slider);
     root->addChild(patientSelector);
     root->addChild(doctorSelector);
     root->addChild(backButton);
@@ -731,89 +859,58 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
     return root;
 }
 
-std:: shared_ptr<Node2D> createAppoinmentCard(COORD position, Appointment *appoinmentPTR, LinkedList<Appointment*> &appoinments, ListElement<Appointment*> *appoinmentLEPTR, Patient*actualPatientPTR, Doctor*actualDoctorPTR, Patient** selectionPatient, Doctor** selectionDoctor, std::shared_ptr<NodeSQ> patientSelector, std::shared_ptr<NodeSQ> doctorSelector){
-    Appointment *localAppointmentPTR = new Appointment(*appoinmentPTR);
-    localAppointmentPTR->patientPTR = actualPatientPTR;
-    localAppointmentPTR->doctorPTR = actualDoctorPTR;
+std:: shared_ptr<Node2D> createAppoinmentCard(COORD position, Appointment *appoinmentPTR, LinkedList<Appointment*> &appoinments, ListElement<Appointment*> *appoinmentLEPTR, Patient*actualPatientPTR, Doctor*actualDoctorPTR){
+    // Use the persistent appoinmentPTR directly as data is immutable for this feature
+    // actualPatientPTR and actualDoctorPTR here are the assigned entity Pointers
 
     auto root = std::make_shared<Node2D>("pivot", position);
 
-    root->setAtExitFunction([localAppointmentPTR](){delete localAppointmentPTR;});
+    // No local copy, no setAtExitFunction needed for the data pointer here
 
     auto label = std::make_shared<NodeUI>("label", COORD{2, 1}, std::vector<std::string>{
-        "Doctor: " + ( (localAppointmentPTR->doctorPTR) ? std::string(localAppointmentPTR->doctorPTR->firstName) : "(Sin asignar)"),
-        "  __________________________________________________.     ",
-        "Paciente: "  + ( (localAppointmentPTR->patientPTR) ? std::string(localAppointmentPTR->patientPTR->firstName) : "(Sin asignar)" ),
-        "  __________________________________________________.     "});
-    std::shared_ptr<NodeButton> saveChanges = std::make_shared<NodeButton>("saveChanges", COORD{100, 50}, Color::BLUE, Color::BLACK, std::vector<std::string>{
-        ".---------.",
-        "| Guardar |",
-        "'---------'"} );
-    saveChanges->setOnClick([localAppointmentPTR, appoinmentPTR, saveChanges](){
-        appoinmentPTR->patientPTR = localAppointmentPTR->patientPTR;       
-        appoinmentPTR->doctorPTR = localAppointmentPTR->doctorPTR;         
-        saveChanges->setLocalPosition(COORD{42, 100});             
-    });
+        "Doctor: " + ( (actualDoctorPTR) ? std::string(actualDoctorPTR->firstName) : "(Sin asignar)"),
+        " __________________________________________________. ",
+        "Paciente: " + ( (actualPatientPTR) ? std::string(actualPatientPTR->firstName) : "(Sin asignar)" ),
+        " __________________________________________________. "});
     
+    // --- Delete Confirmation Dialog ---
     std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([appoinmentPTR, &appoinments, appoinmentLEPTR, root](){
-        //Nota: localPatient sera elminado en exitTree siempre
+        // 1. Delink from the Doctor's scheduledAppointments list (if a Doctor is assigned)
+        if (appoinmentPTR->doctorPTR) {
+            // We use remove_by_value to find and remove the appointment pointer
+            appoinmentPTR->doctorPTR->scheduledAppointments.remove_by_value(appoinmentPTR);
+        }
+        
+        // 2. Delink from the Patient's scheduledAppointments list (if a Patient is assigned)
+        if (appoinmentPTR->patientPTR) {
+            appoinmentPTR->patientPTR->scheduledAppointments.remove_by_value(appoinmentPTR);
+        }
+
+        // 3. Remove from the local context list (Hospital's global appointments list)
+        // The previous implementation used the ListElement pointer, which is fine here.
+        // appoinments.remove_LE(appoinmentLEPTR);
+
+        // 4. CRITICAL: Delete the actual persistent Appointment entity
         delete appoinmentPTR;
-        appoinments.remove_LE(appoinmentLEPTR);
-        root->setLocalPosition({300, 300});
+        
+        // 5. Hide the card UI element
+        root->setLocalPosition({300, 300}); 
     });
     
-    std::shared_ptr<NodeButton> deleteAppoinment = std::make_shared<NodeButton>("deleteAppoinment",  COORD{59, 1}, Color::RED, Color::BLACK, std::vector<std::string>{"X"});
-    deleteAppoinment->setOnClick([confirmDelete](){
+    // --- Delete Button (X) ---
+    std::shared_ptr<NodeButton> deleteAppointment = std::make_shared<NodeButton>("deleteAppointment", COORD{58, 1}, Color::RED, Color::BRIGHT_GREEN, std::vector<std::string>{" X "});
+    deleteAppointment->setOnClick([confirmDelete](){
         confirmDelete->setGlobalPosition(COORD{25, 8});
     });
 
-    auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 10}, Color::WHITE, Color::BLACK);
+    // --- Card Structure ---
+    auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 8}, Color::BRIGHT_GREEN, Color::BRIGHT_GREEN);
 
-    auto editPatient = std::make_shared<NodeButton>("editName", COORD{0, 3}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
-    bool editingP = false;
-    editPatient->setOnClick([label, editPatient, patientSelector, selectionPatient, localAppointmentPTR, editingP]() mutable{
-        if (!editingP){
-            *selectionPatient = nullptr; 
-            patientSelector->setGlobalPosition(COORD{65, 0});
-            editPatient->set_text(std::vector<std::string>{"[ OK ]"});
-        }
-        else{
-            localAppointmentPTR->patientPTR = *selectionPatient;
-            auto txt = label->getText();
-            txt[2] = "Paciente: "  + ( (localAppointmentPTR->patientPTR) ? std::string(localAppointmentPTR->patientPTR->firstName) : "(Sin asignar)");
-            label->set_text(txt);
-            editPatient->set_text(std::vector<std::string>{"[Edit]"});
-            patientSelector->setGlobalPosition(COORD{300, 300});
-        }
-        editingP = !editingP;
-    });
-
-    auto editDoctor = std::make_shared<NodeButton>("editLastname", COORD{0, 1}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
-    bool editingD = false;
-    editDoctor->setOnClick([label, editDoctor, doctorSelector, selectionDoctor, localAppointmentPTR, editingD]() mutable{
-        if (!editingD){
-            *selectionDoctor = nullptr;
-            doctorSelector->setGlobalPosition(COORD{65, 0});
-            editDoctor->set_text(std::vector<std::string>{"[ OK ]"});
-        }
-        else{
-            localAppointmentPTR->doctorPTR = *selectionDoctor;
-            auto txt = label->getText();
-            txt[0] =  "Doctor: " + ( (localAppointmentPTR->doctorPTR) ? std::string(localAppointmentPTR->doctorPTR->firstName) : "(Sin asignar)");
-            label->set_text(txt);
-            editDoctor->set_text(std::vector<std::string>{"[Edit]"});
-            doctorSelector->setGlobalPosition(COORD{300, 300});
-        }
-        editingD = !editingD;
-    });
- 
     root->addChild(square);
     root->addChild(label);
-        label->addChild(editPatient);
-        label->addChild(editDoctor);
-    root->addChild(saveChanges);
-    root->addChild(deleteAppoinment);
+    root->addChild(deleteAppointment);
     root->addChild(confirmDelete);
+
     return root;
 }
 
