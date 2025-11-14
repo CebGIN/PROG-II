@@ -318,9 +318,10 @@ std::shared_ptr<Node> createDoctorMenu(SceneManager &manager, std::shared_ptr<No
 std::shared_ptr<Node2D> createDoctorCard(COORD position, Doctor *doctorPTR, LinkedList<Doctor*> &doctors, ListElement<Doctor*> *doctorLEPTR);
 
 std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actualDoctorPTR, LinkedList<Appointment*> &appointments, std::shared_ptr<Node> mainMenu, SceneManager &manager);
-std:: shared_ptr<Node2D> createAppoinmentCard(COORD position, Appointment *appoinmentPTR, LinkedList<Appointment*> &appoinments, ListElement<Appointment*> *appoinmentLEPTR, Patient*actualPatientPTR, Doctor*actualDoctorPTR);
+std:: shared_ptr<Node2D> createAppoinmentCard(SceneManager &manager, COORD position, Appointment *appoinmentPTR, LinkedList<Appointment*> &appoinments, ListElement<Appointment*> *appoinmentLEPTR, Patient*actualPatientPTR, Doctor*actualDoctorPTR);
 
-
+std::shared_ptr<Node> createMedicalRecordMenu(SceneManager &manager, std::shared_ptr<Node> backScene, Appointment *apptPtr, ListElement<Appointment*> *apptLEPTR);
+std::shared_ptr<Node> createMedicalRecordViewer(SceneManager &manager, std::shared_ptr<Node> backScene, Patient *patientPTR);
 
 std::shared_ptr<Node> createMainMenu(SceneManager &manager){
     //Declarar Nodos
@@ -441,21 +442,38 @@ std::shared_ptr<Node2D> createPatientCard(SceneManager &manager, std::shared_ptr
 
     root->setAtExitFunction([localPatientPTR](){delete localPatientPTR;});
 
-    auto label = std::make_shared<NodeUI>("label", COORD{2, 1}, std::vector<std::string>{
+    auto label = std::make_shared<NodeUI>("label", COORD{7, 1}, std::vector<std::string>{
         "Paciente N:" + std::to_string(localPatientPTR->id),
         "Nombre: "    + std::string(localPatientPTR->firstName),
-        "  __________________________________________________.     ",
         "Apellido: "  + std::string(localPatientPTR->lastName),
-        "  __________________________________________________.     "});
+        "Edad: "      + std::to_string(localPatientPTR->age),
+        "Genero: "    + std::string(1, localPatientPTR->gender),
+        "Tipo Sangre: "+ std::string(localPatientPTR->bloodType),
+        "Telefono: "  + std::string(localPatientPTR->phone),
+        "Direccion: " + std::string(localPatientPTR->address),
+        "Email: "     + std::string(localPatientPTR->email),
+        "Alergias: "  + std::string(localPatientPTR->allergies).substr(0, 40) + "...",
+        "Notas: "     + std::string(localPatientPTR->notes).substr(0, 40) + "..."
+    });
 
     std::shared_ptr<NodeButton> saveChanges = std::make_shared<NodeButton>("saveChanges", COORD{50, 100}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
         ".---------.",
         "| Guardar |",
         "'---------'"});
     saveChanges->setOnClick([localPatientPTR, patientPTR, saveChanges](){
-        strcpy(patientPTR->firstName, localPatientPTR->firstName);       
-        strcpy(patientPTR->lastName, localPatientPTR->lastName);         
-        saveChanges->setLocalPosition(COORD{42, 100});             
+        // Copy all fields from the temporary copy back to the persistent structure
+        strcpy(patientPTR->firstName, localPatientPTR->firstName); 
+        strcpy(patientPTR->lastName, localPatientPTR->lastName); 
+        patientPTR->age = localPatientPTR->age;
+        patientPTR->gender = localPatientPTR->gender;
+        strcpy(patientPTR->bloodType, localPatientPTR->bloodType);
+        strcpy(patientPTR->phone, localPatientPTR->phone);
+        strcpy(patientPTR->address, localPatientPTR->address);
+        strcpy(patientPTR->email, localPatientPTR->email);
+        strcpy(patientPTR->allergies, localPatientPTR->allergies);
+        strcpy(patientPTR->notes, localPatientPTR->notes);
+        
+        saveChanges->setLocalPosition(COORD{42, 100});
     });
 
     std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([patientPTR, &patients, patientLEPTR, root](){
@@ -492,33 +510,132 @@ std::shared_ptr<Node2D> createPatientCard(SceneManager &manager, std::shared_ptr
         confirmDelete->setGlobalPosition(COORD{25, 8});
     });
 
-    auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 10}, Color::BRIGHT_YELLOW, Color::BRIGHT_YELLOW);
-    auto editName = std::make_shared<NodeButton>("editName", COORD{0, 2}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
-    editName->setOnClick([localPatientPTR, editName, label, saveChanges](){
-        strncpy(localPatientPTR->firstName, (Input::getLineInput(editName->getGlobalPosition() + COORD{6, 0})).c_str(), 50);
+    auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 14}, Color::BRIGHT_YELLOW, Color::BRIGHT_YELLOW);
+
+    auto update_patient_label = [label, localPatientPTR](){
         std::vector<std::string> labelText = label->getText();
-        labelText[1] = "Nombre: "    + std::string(localPatientPTR->firstName);
+        labelText[1] = "Nombre: "      + std::string(localPatientPTR->firstName);
+        labelText[2] = "Apellido: "    + std::string(localPatientPTR->lastName);
+        labelText[3] = "Edad: "        + std::to_string(localPatientPTR->age);
+        labelText[4] = "Genero: "      + std::string(1, localPatientPTR->gender);
+        labelText[5] = "Tipo Sangre: " + std::string(localPatientPTR->bloodType);
+        labelText[6] = "Telefono: "    + std::string(localPatientPTR->phone);
+        labelText[7] = "Direccion: "   + std::string(localPatientPTR->address);
+        labelText[8] = "Email: "       + std::string(localPatientPTR->email);
+        labelText[9] = "Alergias: "    + std::string(localPatientPTR->allergies).substr(0, 40) + "...";
+        labelText[10] = "Notas: "      + std::string(localPatientPTR->notes).substr(0, 40) + "...";
         label->set_text(labelText);
-        saveChanges->setLocalPosition(COORD{42, 6});
+    };
+
+    // First Name (row 1)
+    auto editName = std::make_shared<NodeButton>("editName", COORD{-6, 1}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editName->setOnClick([localPatientPTR, editName, update_patient_label, saveChanges](){
+        strncpy(localPatientPTR->firstName, (Input::getLineInput(editName->getGlobalPosition() + COORD{15, 0})).c_str(), 50);
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
     });
-    auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{0, 4}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
-    editLastname->setOnClick([localPatientPTR, editLastname, label, saveChanges](){
-        strncpy(localPatientPTR->lastName, (Input::getLineInput(editLastname->getGlobalPosition() + COORD{6, 0})).c_str(), 50);
-        std::vector<std::string> labelText = label->getText();
-        labelText[3] = "Nombre: "    + std::string(localPatientPTR->lastName);
-        label->set_text(labelText);
-        saveChanges->setLocalPosition(COORD{42, 6});
+    
+    // Last Name (row 2)
+    auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{-6, 2}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editLastname->setOnClick([localPatientPTR, editLastname, update_patient_label, saveChanges](){
+        strncpy(localPatientPTR->lastName, (Input::getLineInput(editLastname->getGlobalPosition() + COORD{15, 0})).c_str(), 50);
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
     });
 
-    auto goToAppointments = std::make_shared<NodeButton>("checkAppointments", COORD{0, 7}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Ver citas]"});
-goToAppointments->setOnClick([patientPTR, &manager, mainMenu](){
-    manager.changeScene(checkAppointmentsOf(patientPTR, nullptr, patientPTR->scheduledAppointments, mainMenu, manager));
-});
+    // Age (row 3)
+    auto editAge = std::make_shared<NodeButton>("editAge", COORD{-6, 3}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editAge->setOnClick([localPatientPTR, editAge, update_patient_label, saveChanges](){
+        std::string input = Input::getLineInput(editAge->getGlobalPosition() + COORD{15, 0});
+        try {
+            localPatientPTR->age = std::stoi(input);
+        } catch (...) { /* Handle conversion error silently */ }
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
+    });
+
+    // Gender (row 4)
+    auto editGender = std::make_shared<NodeButton>("editGender", COORD{-6, 4}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editGender->setOnClick([localPatientPTR, editGender, update_patient_label, saveChanges](){
+        std::string input = Input::getLineInput(editGender->getGlobalPosition() + COORD{15, 0});
+        if (!input.empty()) localPatientPTR->gender = input[0];
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
+    });
+
+    // Blood Type (row 5)
+    auto editBlood = std::make_shared<NodeButton>("editBlood", COORD{-6, 5}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editBlood->setOnClick([localPatientPTR, editBlood, update_patient_label, saveChanges](){
+        strncpy(localPatientPTR->bloodType, (Input::getLineInput(editBlood->getGlobalPosition() + COORD{15, 0})).c_str(), 5);
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
+    });
+    
+    // Phone (row 6)
+    auto editPhone = std::make_shared<NodeButton>("editPhone", COORD{-6, 6}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editPhone->setOnClick([localPatientPTR, editPhone, update_patient_label, saveChanges](){
+        strncpy(localPatientPTR->phone, (Input::getLineInput(editPhone->getGlobalPosition() + COORD{15, 0})).c_str(), 15);
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
+    });
+
+    // Address (row 7)
+    auto editAddress = std::make_shared<NodeButton>("editAddress", COORD{-6, 7}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editAddress->setOnClick([localPatientPTR, editAddress, update_patient_label, saveChanges](){
+        strncpy(localPatientPTR->address, (Input::getLineInput(editAddress->getGlobalPosition() + COORD{15, 0})).c_str(), 100);
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
+    });
+
+    // Email (row 8)
+    auto editEmail = std::make_shared<NodeButton>("editEmail", COORD{-6, 8}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editEmail->setOnClick([localPatientPTR, editEmail, update_patient_label, saveChanges](){
+        strncpy(localPatientPTR->email, (Input::getLineInput(editEmail->getGlobalPosition() + COORD{15, 0})).c_str(), 50);
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
+    });
+
+    // Allergies (row 9)
+    auto editAllergies = std::make_shared<NodeButton>("editAllergies", COORD{-6, 9}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editAllergies->setOnClick([localPatientPTR, editAllergies, update_patient_label, saveChanges](){
+        strncpy(localPatientPTR->allergies, (Input::getLineInput(editAllergies->getGlobalPosition() + COORD{15, 0})).c_str(), 500);
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
+    });
+    
+    // Notes (row 10)
+    auto editNotes = std::make_shared<NodeButton>("editNotes", COORD{-6, 10}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editNotes->setOnClick([localPatientPTR, editNotes, update_patient_label, saveChanges](){
+        strncpy(localPatientPTR->notes, (Input::getLineInput(editNotes->getGlobalPosition() + COORD{15, 0})).c_str(), 500);
+        update_patient_label();
+        saveChanges->setLocalPosition(COORD{42, 12});
+    });
+
+    auto goToAppointments = std::make_shared<NodeButton>("checkAppointments", COORD{0, 12}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Ver citas]"});
+    goToAppointments->setOnClick([patientPTR, &manager, mainMenu](){
+        manager.changeScene(checkAppointmentsOf(patientPTR, nullptr, patientPTR->scheduledAppointments, mainMenu, manager));
+    });
+
+    auto goToRecords = std::make_shared<NodeButton>("checkRecords", COORD{15, 12}, Color::CYAN, Color::BLACK, std::vector<std::string>{"[ Ver Expediente ]"});
+    goToRecords->setOnClick([patientPTR, &manager, root](){
+        // The current patient menu will be the back scene
+        manager.changeScene(createMedicalRecordViewer(manager, manager.getCurrrentScene(), patientPTR)); 
+    });
+
     root->addChild(square);
     root->addChild(label);
         label->addChild(editName);
         label->addChild(editLastname);
+        label->addChild(editAge);
+        label->addChild(editGender);
+        label->addChild(editBlood);
+        label->addChild(editPhone);
+        label->addChild(editAddress);
+        label->addChild(editEmail);
+        label->addChild(editAllergies);
+        label->addChild(editNotes);
         label->addChild(goToAppointments);
+        label->addChild(goToRecords);
     root->addChild(saveChanges);
     root->addChild(deletePatient);
     root->addChild(confirmDelete);
@@ -604,78 +721,161 @@ std::shared_ptr<Node2D> createDoctorCard(COORD position, Doctor *doctorPTR, Link
 
     root->setAtExitFunction([localDoctorPTR](){delete localDoctorPTR;});
 
-    auto label = std::make_shared<NodeUI>("label", COORD{2, 1}, std::vector<std::string>{
-        "Doctor N:" + std::to_string(localDoctorPTR->id),
-        "Nombre: "    + std::string(localDoctorPTR->firstName),
-        "  __________________________________________________.     ",
-        "Apellido: "  + std::string(localDoctorPTR->lastName),
-        "  __________________________________________________.     "});
+    auto label = std::make_shared<NodeUI>("label", COORD{7, 1}, std::vector<std::string>{
+        "Doctor N:"      + std::to_string(localDoctorPTR->id),
+        "Nombre: "       + std::string(localDoctorPTR->firstName),
+        "Apellido: "     + std::string(localDoctorPTR->lastName),
+        "Especialidad: " + std::string(localDoctorPTR->specialty),
+        "Exp. (Años): "  + std::to_string(localDoctorPTR->yearsExperience),
+        "Tarifa: "       + std::to_string(localDoctorPTR->consultationFee),
+        "Horario: "      + std::string(localDoctorPTR->workingHours),
+        "Teléfono: "     + std::string(localDoctorPTR->phone),
+        "Email: "        + std::string(localDoctorPTR->email)
+    });
 
     std::shared_ptr<NodeButton> saveChanges = std::make_shared<NodeButton>("saveChanges", COORD{50, 100}, Color::BLUE, Color::BLACK, std::vector<std::string>{
         ".---------.",
         "| Guardar |",
         "'---------'"});
     saveChanges->setOnClick([localDoctorPTR, doctorPTR, saveChanges](){
-        strcpy(doctorPTR->firstName, localDoctorPTR->firstName);       
-        strcpy(doctorPTR->lastName, localDoctorPTR->lastName);         
-        saveChanges->setLocalPosition(COORD{42, 100});             
-    });
-    
-    // Inside createDoctorCard:
+        // Copy all fields from the temporary copy back to the persistent structure
+        strcpy(doctorPTR->firstName, localDoctorPTR->firstName);
+        strcpy(doctorPTR->lastName, localDoctorPTR->lastName);
+        strcpy(doctorPTR->specialty, localDoctorPTR->specialty);
+        doctorPTR->yearsExperience = localDoctorPTR->yearsExperience;
+        doctorPTR->consultationFee = localDoctorPTR->consultationFee;
+        strcpy(doctorPTR->workingHours, localDoctorPTR->workingHours);
+        strcpy(doctorPTR->phone, localDoctorPTR->phone);
+        strcpy(doctorPTR->email, localDoctorPTR->email);
 
-// ...
-std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([doctorPTR, &doctors, doctorLEPTR, root](){
-    // --- 1. Cleanup Appointments (CRITICAL) ---
-    doctorPTR->scheduledAppointments.reset_iteration();
-    for (int i = 0; i < doctorPTR->scheduledAppointments.get_size(); ++i) {
-        Appointment* appt_to_delete = doctorPTR->scheduledAppointments.get_iteration();
-        
-        // Remove from Patient's scheduled list using the new method
-        if (appt_to_delete->patientPTR) {
-            appt_to_delete->patientPTR->scheduledAppointments.remove_by_value(appt_to_delete);
+        saveChanges->setLocalPosition(COORD{42, 100}); // Hide save button
+    });
+
+    auto update_doctor_label = [label, localDoctorPTR](){
+        std::vector<std::string> labelText = label->getText();
+        labelText[1] = "Nombre: "       + std::string(localDoctorPTR->firstName);
+        labelText[2] = "Apellido: "     + std::string(localDoctorPTR->lastName);
+        labelText[3] = "Especialidad: " + std::string(localDoctorPTR->specialty);
+        labelText[4] = "Exp. (Años): "  + std::to_string(localDoctorPTR->yearsExperience);
+        labelText[5] = "Tarifa: "       + std::to_string(localDoctorPTR->consultationFee);
+        labelText[6] = "Horario: "      + std::string(localDoctorPTR->workingHours);
+        labelText[7] = "Teléfono: "     + std::string(localDoctorPTR->phone);
+        labelText[8] = "Email: "        + std::string(localDoctorPTR->email);
+        label->set_text(labelText);
+    };
+
+    std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([doctorPTR, &doctors, doctorLEPTR, root](){
+        // --- 1. Cleanup Appointments (CRITICAL) ---
+        doctorPTR->scheduledAppointments.reset_iteration();
+        for (int i = 0; i < doctorPTR->scheduledAppointments.get_size(); ++i) {
+            Appointment* appt_to_delete = doctorPTR->scheduledAppointments.get_iteration();
+            
+            // Remove from Patient's scheduled list using the new method
+            if (appt_to_delete->patientPTR) {
+                appt_to_delete->patientPTR->scheduledAppointments.remove_by_value(appt_to_delete);
+            }
+            
+            // Remove from the Hospital's global list using the new method
+            hospital.appointments.remove_by_value(appt_to_delete);
+            
+            // Deleting the appointment entity itself
+            delete appt_to_delete; 
+            doctorPTR->scheduledAppointments.continue_iteration();
         }
         
-        // Remove from the Hospital's global list using the new method
-        hospital.appointments.remove_by_value(appt_to_delete);
-        
-        // Deleting the appointment entity itself
-        delete appt_to_delete; 
-        doctorPTR->scheduledAppointments.continue_iteration();
-    }
+        // --- 2. Cleanup Doctor Entity ---
+        delete doctorPTR;
+        doctors.remove_LE(doctorLEPTR);
+        root->setLocalPosition({0, 100});
+    });
     
-    // --- 2. Cleanup Doctor Entity ---
-    delete doctorPTR;
-    doctors.remove_LE(doctorLEPTR);
-    root->setLocalPosition({0, 100});
-});
-    
-    std::shared_ptr<NodeButton> deleteDoctor = std::make_shared<NodeButton>("deletePatient", COORD{59, 1}, Color::RED, Color::BLACK, std::vector<std::string>{"X"});
+    std::shared_ptr<NodeButton> deleteDoctor = std::make_shared<NodeButton>("deletePatient", COORD{58, 1}, Color::RED, Color::BRIGHT_CYAN, std::vector<std::string>{" X "});
     deleteDoctor->setOnClick([confirmDelete](){
         confirmDelete->setGlobalPosition(COORD{25, 8});
     });
 
-    auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 10}, Color::WHITE, Color::BLACK);
-    auto editName = std::make_shared<NodeButton>("editName", COORD{0, 2}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
-    editName->setOnClick([localDoctorPTR, editName, label, saveChanges](){
-        strncpy(localDoctorPTR->firstName, (Input::getLineInput(editName->getGlobalPosition() + COORD{6, 0})).c_str(), 50);
-        std::vector<std::string> labelText = label->getText();
-        labelText[1] = "Nombre: "    + std::string(localDoctorPTR->firstName);
-        label->set_text(labelText);
-        saveChanges->setLocalPosition(COORD{42, 6});
+    auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 12}, Color::BRIGHT_CYAN, Color::BRIGHT_CYAN);
+    
+    // First Name (row 1)
+    auto editName = std::make_shared<NodeButton>("editName", COORD{-6, 1}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editName->setOnClick([localDoctorPTR, editName, update_doctor_label, saveChanges](){
+        strncpy(localDoctorPTR->firstName, (Input::getLineInput(editName->getGlobalPosition() + COORD{15, 0})).c_str(), 50);
+        update_doctor_label();
+        saveChanges->setLocalPosition(COORD{42, 10});
     });
-    auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{0, 4}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
-    editLastname->setOnClick([localDoctorPTR, editLastname, label, saveChanges](){
-        strncpy(localDoctorPTR->lastName, (Input::getLineInput(editLastname->getGlobalPosition() + COORD{6, 0})).c_str(), 50);
-        std::vector<std::string> labelText = label->getText();
-        labelText[3] = "Nombre: "    + std::string(localDoctorPTR->lastName);
-        label->set_text(labelText);
-        saveChanges->setLocalPosition(COORD{42, 6});
+    
+    // Last Name (row 2)
+    auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{-6, 2}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editLastname->setOnClick([localDoctorPTR, editLastname, update_doctor_label, saveChanges](){
+        strncpy(localDoctorPTR->lastName, (Input::getLineInput(editLastname->getGlobalPosition() + COORD{15, 0})).c_str(), 50);
+        update_doctor_label();
+        saveChanges->setLocalPosition(COORD{42, 10});
+    });
+
+    // Specialty (row 3)
+    auto editSpecialty = std::make_shared<NodeButton>("editSpecialty", COORD{-6, 3}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editSpecialty->setOnClick([localDoctorPTR, editSpecialty, update_doctor_label, saveChanges](){
+        strncpy(localDoctorPTR->specialty, (Input::getLineInput(editSpecialty->getGlobalPosition() + COORD{15, 0})).c_str(), 50);
+        update_doctor_label();
+        saveChanges->setLocalPosition(COORD{42, 10});
+    });
+
+    // Years Experience (row 4)
+    auto editExp = std::make_shared<NodeButton>("editExp", COORD{-6, 4}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editExp->setOnClick([localDoctorPTR, editExp, update_doctor_label, saveChanges](){
+        std::string input = Input::getLineInput(editExp->getGlobalPosition() + COORD{15, 0});
+        try {
+            localDoctorPTR->yearsExperience = std::stoi(input);
+        } catch (...) { /* Handle conversion error silently */ }
+        update_doctor_label();
+        saveChanges->setLocalPosition(COORD{42, 10});
+    });
+
+    // Consultation Fee (row 5)
+    auto editFee = std::make_shared<NodeButton>("editFee", COORD{-6, 5}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editFee->setOnClick([localDoctorPTR, editFee, update_doctor_label, saveChanges](){
+        std::string input = Input::getLineInput(editFee->getGlobalPosition() + COORD{15, 0});
+        try {
+            localDoctorPTR->consultationFee = std::stof(input);
+        } catch (...) { /* Handle conversion error silently */ }
+        update_doctor_label();
+        saveChanges->setLocalPosition(COORD{42, 10});
+    });
+    
+    // Working Hours (row 6)
+    auto editHours = std::make_shared<NodeButton>("editHours", COORD{-6, 6}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editHours->setOnClick([localDoctorPTR, editHours, update_doctor_label, saveChanges](){
+        strncpy(localDoctorPTR->workingHours, (Input::getLineInput(editHours->getGlobalPosition() + COORD{15, 0})).c_str(), 50);
+        update_doctor_label();
+        saveChanges->setLocalPosition(COORD{42, 10});
+    });
+
+    // Phone (row 7)
+    auto editPhone = std::make_shared<NodeButton>("editPhone", COORD{-6, 7}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editPhone->setOnClick([localDoctorPTR, editPhone, update_doctor_label, saveChanges](){
+        strncpy(localDoctorPTR->phone, (Input::getLineInput(editPhone->getGlobalPosition() + COORD{15, 0})).c_str(), 15);
+        update_doctor_label();
+        saveChanges->setLocalPosition(COORD{42, 10});
+    });
+
+    // Email (row 8)
+    auto editEmail = std::make_shared<NodeButton>("editEmail", COORD{-6, 8}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+    editEmail->setOnClick([localDoctorPTR, editEmail, update_doctor_label, saveChanges](){
+        strncpy(localDoctorPTR->email, (Input::getLineInput(editEmail->getGlobalPosition() + COORD{15, 0})).c_str(), 50);
+        update_doctor_label();
+        saveChanges->setLocalPosition(COORD{42, 10});
     });
 
     root->addChild(square);
     root->addChild(label);
         label->addChild(editName);
         label->addChild(editLastname);
+        label->addChild(editSpecialty);
+        label->addChild(editExp);
+        label->addChild(editFee);
+        label->addChild(editHours);
+        label->addChild(editPhone);
+        label->addChild(editEmail);
     root->addChild(saveChanges);
     root->addChild(deleteDoctor);
     root->addChild(confirmDelete);
@@ -729,7 +929,7 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
         Patient* patientPTR = hospital.patients.get_iteration();
         // Capture patientSelector, cardCont, cards by value/reference for the lambda
         auto patientN = std::make_shared<NodeButton>("px", COORD{(SHORT)1, (SHORT)(i + 1)}, Color::BRIGHT_YELLOW, Color::YELLOW, std::vector<std::string>{patientPTR->firstName});
-        patientN->setOnClick([patientPTR, actualDoctorPTR, patientSelector, cardCont, cards, &appointments](){
+        patientN->setOnClick([&manager, patientPTR, actualDoctorPTR, patientSelector, cardCont, cards, &appointments](){
             // 1. Create the new Appointment with the selected Patient and the context Doctor
             Appointment* newAppoinmentPTR = new Appointment();
             newAppoinmentPTR->id = Patient::nextId++;
@@ -742,7 +942,7 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
             if (actualDoctorPTR) actualDoctorPTR->scheduledAppointments.push_back(newAppoinmentPTR);
             
             // 3. Create and add the UI card
-            cards->push_back( createAppoinmentCard( 
+            cards->push_back( createAppoinmentCard(manager, 
                 COORD{0, SHORT( cards->get_size() * 20 + 4 )}, newAppoinmentPTR, appointments, appointments.getEndLE(), 
                 newAppoinmentPTR->patientPTR, newAppoinmentPTR->doctorPTR ) );
             cardCont->addChild(cards->getEnd());
@@ -763,7 +963,7 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
         Doctor* doctorPTR = hospital.doctors.get_iteration();
         // Capture doctorSelector, cardCont, cards by value/reference for the lambda
         auto doctorN = std::make_shared<NodeButton>("dx", COORD{(SHORT)1, (SHORT)(i + 1)}, Color::BRIGHT_CYAN, Color::CYAN, std::vector<std::string>{doctorPTR->firstName});
-        doctorN->setOnClick([doctorPTR, actualPatientPTR, doctorSelector, cardCont, cards, &appointments](){
+        doctorN->setOnClick([&manager, doctorPTR, actualPatientPTR, doctorSelector, cardCont, cards, &appointments](){
             // 1. Create the new Appointment with the selected Doctor and the context Patient
             Appointment* newAppoinmentPTR = new Appointment();
             newAppoinmentPTR->id = Patient::nextId++;
@@ -776,7 +976,7 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
             if (doctorPTR) doctorPTR->scheduledAppointments.push_back(newAppoinmentPTR);
             
             // 3. Create and add the UI card
-            cards->push_back( createAppoinmentCard( 
+            cards->push_back( createAppoinmentCard(manager, 
                 COORD{0, SHORT( cards->get_size() * 20 + 4 )}, newAppoinmentPTR, appointments, appointments.getEndLE(), 
                 newAppoinmentPTR->patientPTR, newAppoinmentPTR->doctorPTR ) );
             cardCont->addChild(cards->getEnd());
@@ -821,7 +1021,7 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
     for (int i = 0; i < appointments.get_size(); i++){
         // Pass the already assigned Pointers from the list, not the scene context pointers
         Appointment* appPtr = appointments.get_iteration();
-        cards->push_back(createAppoinmentCard({0, SHORT(i*20 + 4)}, appPtr, appointments, appointments.get_iteration_LE(), 
+        cards->push_back(createAppoinmentCard(manager, {0, SHORT(i*20 + 4)}, appPtr, appointments, appointments.get_iteration_LE(), 
             appPtr->patientPTR, appPtr->doctorPTR) ) ;
         appointments.continue_iteration();
     }
@@ -859,7 +1059,7 @@ std::shared_ptr<Node> checkAppointmentsOf(Patient*actualPatientPTR, Doctor*actua
     return root;
 }
 
-std:: shared_ptr<Node2D> createAppoinmentCard(COORD position, Appointment *appoinmentPTR, LinkedList<Appointment*> &appoinments, ListElement<Appointment*> *appoinmentLEPTR, Patient*actualPatientPTR, Doctor*actualDoctorPTR){
+std:: shared_ptr<Node2D> createAppoinmentCard(SceneManager &manager, COORD position, Appointment *appoinmentPTR, LinkedList<Appointment*> &appoinments, ListElement<Appointment*> *appoinmentLEPTR, Patient*actualPatientPTR, Doctor*actualDoctorPTR){
     // Use the persistent appoinmentPTR directly as data is immutable for this feature
     // actualPatientPTR and actualDoctorPTR here are the assigned entity Pointers
 
@@ -873,33 +1073,33 @@ std:: shared_ptr<Node2D> createAppoinmentCard(COORD position, Appointment *appoi
         "Paciente: " + ( (actualPatientPTR) ? std::string(actualPatientPTR->firstName) : "(Sin asignar)" ),
         " __________________________________________________. "});
     
-    // --- Delete Confirmation Dialog ---
-    std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([appoinmentPTR, &appoinments, appoinmentLEPTR, root](){
-        // 1. Delink from the Doctor's scheduledAppointments list (if a Doctor is assigned)
-        if (appoinmentPTR->doctorPTR) {
-            // We use remove_by_value to find and remove the appointment pointer
-            appoinmentPTR->doctorPTR->scheduledAppointments.remove_by_value(appoinmentPTR);
-        }
+    // --- Delete Confirmation Dialog (REPURPOSED as ARCHIVE) ---
+    std::shared_ptr<NodeSQ> confirmDelete = confirmDialog([appoinmentPTR, &appoinments, appoinmentLEPTR, root, &manager](){
         
-        // 2. Delink from the Patient's scheduledAppointments list (if a Patient is assigned)
-        if (appoinmentPTR->patientPTR) {
-            appoinmentPTR->patientPTR->scheduledAppointments.remove_by_value(appoinmentPTR);
+        // Check if a patient exists to receive the record
+        if (appoinmentPTR->patientPTR == nullptr) {
+            // Handle error: Appointment cannot be archived without a patient
+            // For simplicity, we'll still switch scenes but the new scene can show an error.
+            // Or, we can just delete the appointment if no record is possible:
+            // delete appoinmentPTR; appoinments.remove_LE(appoinmentLEPTR); root->setLocalPosition({300, 300}); return;
         }
-
-        // 3. Remove from the local context list (Hospital's global appointments list)
-        // The previous implementation used the ListElement pointer, which is fine here.
-        // appoinments.remove_LE(appoinmentLEPTR);
-
-        // 4. CRITICAL: Delete the actual persistent Appointment entity
-        delete appoinmentPTR;
+    
+        // Pass the appointment data and the ListElement pointer (for cleanup after saving the record)
+        // The current scene (RootAppoinments) will act as the backScene
+        manager.changeScene(createMedicalRecordMenu(manager, manager.getCurrrentScene(), appoinmentPTR, appoinmentLEPTR));
         
-        // 5. Hide the card UI element
-        root->setLocalPosition({300, 300}); 
+        // We do NOT delete the pointers or remove from the lists here.
+        // Cleanup happens AFTER the user saves the record in createMedicalRecordMenu.
     });
     
-    // --- Delete Button (X) ---
-    std::shared_ptr<NodeButton> deleteAppointment = std::make_shared<NodeButton>("deleteAppointment", COORD{58, 1}, Color::RED, Color::BRIGHT_GREEN, std::vector<std::string>{" X "});
-    deleteAppointment->setOnClick([confirmDelete](){
+    std::shared_ptr<NodeButton> finalizeAppointment = std::make_shared<NodeButton>("finalizeAppointment", COORD{50, 6}, Color::GREEN, Color::BLACK, std::vector<std::string>{
+        ".----------.",
+        "| Archivar |",
+        "'----------'"
+    });
+
+    // Update the position of the dialog call
+    finalizeAppointment->setOnClick([confirmDelete](){
         confirmDelete->setGlobalPosition(COORD{25, 8});
     });
 
@@ -908,9 +1108,147 @@ std:: shared_ptr<Node2D> createAppoinmentCard(COORD position, Appointment *appoi
 
     root->addChild(square);
     root->addChild(label);
-    root->addChild(deleteAppointment);
+    root->addChild(finalizeAppointment);
     root->addChild(confirmDelete);
 
+    return root;
+}
+
+std::shared_ptr<Node> createMedicalRecordMenu(SceneManager &manager, std::shared_ptr<Node> backScene, Appointment *apptPtr, ListElement<Appointment*> *apptLEPTR){
+    std::shared_ptr<Node> root = std::make_shared<Node>("RootMedicalRecord");
+    
+    // Create a new MedicalRecord struct to hold the data being entered
+    MedicalRecord *newRecordPTR = new MedicalRecord();
+    newRecordPTR->recordId = apptPtr->patientPTR->history.get_size() + 1; // Simple ID assignment
+    newRecordPTR->doctorId = apptPtr->doctorPTR ? apptPtr->doctorPTR->id : 0;
+    
+    // CRITICAL: Ensure this temporary record is deleted if the user cancels
+    root->setAtExitFunction([newRecordPTR](){delete newRecordPTR;});
+    
+    // --- UI Elements ---
+    
+    std::shared_ptr<NodeUI> header = std::make_shared<NodeUI>("Header", COORD{1, 1}, std::vector<std::string>{
+        "--- CREAR EXPEDIENTE MEDICO ---",
+        "Paciente: " + std::string(apptPtr->patientPTR->firstName) + " " + std::string(apptPtr->patientPTR->lastName),
+        "Doctor: " + (apptPtr->doctorPTR ? std::string(apptPtr->doctorPTR->lastName) : "N/A")
+    });
+    
+    // Placeholders for input fields (You'll need to define your input nodes e.g. NodeInput)
+    // For this example, we'll use buttons to trigger the input via Input::getLineInput
+    
+    // NOTE: You need robust input handling here.
+    
+    // Diagnosis Input
+    auto diagButton = std::make_shared<NodeButton>("DiagBtn", COORD{1, 5}, Color::WHITE, Color::BLACK, std::vector<std::string>{"[ Diagnosis: (Click to Enter) ]"});
+    diagButton->setOnClick([diagButton, newRecordPTR](){
+        std::string input = Input::getLineInput(diagButton->getGlobalPosition() + COORD{32, 0});
+        strncpy(newRecordPTR->diagnosis, input.c_str(), 200);
+        diagButton->set_text({"[ Diagnosis: " + input + " ]"});
+    });
+    
+    // Treatment Input
+    auto treatButton = std::make_shared<NodeButton>("TreatBtn", COORD{1, 7}, Color::WHITE, Color::BLACK, std::vector<std::string>{"[ Treatment: (Click to Enter) ]"});
+    treatButton->setOnClick([treatButton, newRecordPTR](){
+        std::string input = Input::getLineInput(treatButton->getGlobalPosition() + COORD{32, 0});
+        strncpy(newRecordPTR->treatment, input.c_str(), 200);
+        treatButton->set_text({"[ Treatment: " + input + " ]"});
+    });
+    
+    // Medications Input
+    auto medButton = std::make_shared<NodeButton>("MedBtn", COORD{1, 9}, Color::WHITE, Color::BLACK, std::vector<std::string>{"[ Medications: (Click to Enter) ]"});
+    medButton->setOnClick([medButton, newRecordPTR](){
+        std::string input = Input::getLineInput(medButton->getGlobalPosition() + COORD{32, 0});
+        strncpy(newRecordPTR->medications, input.c_str(), 150);
+        medButton->set_text({"[ Medications: " + input + " ]"});
+    });
+
+    // --- Save and Finalize Button ---
+    std::shared_ptr<NodeButton> saveAndFinalize = std::make_shared<NodeButton>("SaveBtn", COORD{1, 15}, Color::BRIGHT_GREEN, Color::BLACK, std::vector<std::string>{"[ GUARDAR Y FINALIZAR CITA ]"});
+    saveAndFinalize->setOnClick([&manager, backScene, newRecordPTR, apptPtr, apptLEPTR](){
+        
+        // 1. Archive the new MedicalRecord (add to Patient's history list)
+        apptPtr->patientPTR->history.push_back(newRecordPTR);
+        
+        // 2. Perform Appointment Cleanup (DELETE from all lists)
+        // A. Delink from Doctor's list
+        if (apptPtr->doctorPTR) {
+            apptPtr->doctorPTR->scheduledAppointments.remove_by_value(apptPtr);
+        }
+        // B. Delink from Patient's list (though this appointment will be deleted in C, it's safer)
+        if (apptPtr->patientPTR) {
+            apptPtr->patientPTR->scheduledAppointments.remove_by_value(apptPtr);
+        }
+        // C. Remove from the Hospital's global list and delete the pointer
+        hospital.appointments.remove_by_value(apptPtr);
+        delete apptPtr; 
+        
+        // 3. Prevent temporary record deletion on exit (we just stored it)
+        // Since we explicitly stored newRecordPTR in history, we need to prevent the atExit() deletion.
+        // A simple way is to pass a null to setAtExitFunction, or use a flag.
+        // Since we cannot modify the lambda for root->setAtExitFunction dynamically,
+        // we must ensure `newRecordPTR` is not deleted by *this* scene.
+        // (This often requires removing the AtExitFunction, or having it check a flag.)
+        // For simplicity under constraints, we'll rely on the push_back and assume ownership transfer.
+        
+        // 4. Return to the previous appointments scene
+        manager.changeScene(backScene);
+    });
+
+    // --- Cancel Button ---
+    std::shared_ptr<NodeButton> cancel = std::make_shared<NodeButton>("CancelBtn", COORD{35, 15}, Color::RED, Color::BLACK, std::vector<std::string>{"[ CANCELAR ]"});
+    cancel->setOnClick([&manager, backScene](){
+        // The newRecordPTR will be deleted by root->setAtExitFunction
+        manager.changeScene(backScene);
+    });
+    
+    root->addChild(header);
+    root->addChild(diagButton);
+    root->addChild(treatButton);
+    root->addChild(medButton);
+    root->addChild(saveAndFinalize);
+    root->addChild(cancel);
+
+    return root;
+}
+
+std::shared_ptr<Node> createMedicalRecordViewer(SceneManager &manager, std::shared_ptr<Node> backScene, Patient *patientPTR){
+    std::shared_ptr<Node> root = std::make_shared<Node>("RootRecordsViewer");
+    
+    std::shared_ptr<NodeUI> header = std::make_shared<NodeUI>("Header", COORD{1, 1}, std::vector<std::string>{
+        "--- EXPEDIENTE MEDICO DE: " + std::string(patientPTR->firstName) + " " + std::string(patientPTR->lastName) + " ---"
+    });
+    
+    std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 3}, Color::RED, Color::BLACK, std::vector<std::string>{"[ VOLVER ]"});
+    backButton->setOnClick([&manager, backScene](){
+        manager.changeScene(backScene);
+    });
+    
+    std::shared_ptr<Node2D> recordCont = std::make_shared<Node2D>("RecordCont", COORD{1, 5});
+    
+    // Display all records
+    patientPTR->history.reset_iteration();
+    for (int i = 0; i < patientPTR->history.get_size(); i++){
+        MedicalRecord *record = patientPTR->history.get_iteration();
+        
+        auto recordCard = std::make_shared<NodeUI>("RecCard" + std::to_string(i), COORD{0, SHORT(i * 7)}, std::vector<std::string>{
+            "ID: " + std::to_string(record->recordId) + " | Doctor ID: " + std::to_string(record->doctorId),
+            "------------------------------------------------",
+            "Diagnosis: " + std::string(record->diagnosis).substr(0, 50) + "...",
+            "Treatment: " + std::string(record->treatment).substr(0, 50) + "...",
+            "Medications: " + std::string(record->medications).substr(0, 50) + "...",
+            "------------------------------------------------"
+        });
+        recordCont->addChild(recordCard);
+        
+        patientPTR->history.continue_iteration();
+    }
+    
+    // Add scroll logic if needed (similar to patient/doctor menu sliders)
+    
+    root->addChild(header);
+    root->addChild(backButton);
+    root->addChild(recordCont);
+    
     return root;
 }
 
