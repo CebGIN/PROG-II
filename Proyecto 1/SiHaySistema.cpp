@@ -313,9 +313,11 @@ std::shared_ptr<NodeSQ> confirmDialog(std::function<void()> onConfirm){
 std::shared_ptr<Node> createMainMenu(SceneManager &manager);
 std::shared_ptr<Node> createPatientMenu(SceneManager &manager);
 std::shared_ptr<Node2D> createPatientCard(SceneManager &manager, COORD position, Patient *patientPTR, ListElement<Patient*> *patientLEPTR);
+std::shared_ptr<Node> createSinglePatientCardView(SceneManager &manager, Patient *patientPTR);
 
 std::shared_ptr<Node> createDoctorMenu(SceneManager &manager);
 std::shared_ptr<Node2D> createDoctorCard(SceneManager &manager, COORD position, Doctor *doctorPTR, ListElement<Doctor*> *doctorLEPTR);
+std::shared_ptr<Node> createSingleDoctorCardView(SceneManager &manager, Doctor *doctorPTR);
 
 std::shared_ptr<Node> checkAppointmentsOf(SceneManager &manager, Patient*actualPatientPTR, Doctor*actualDoctorPTR, int contextFlag);
 std:: shared_ptr<Node2D> createAppoinmentCard(SceneManager &manager, COORD position, Appointment *appoinmentPTR, int contextFlag);
@@ -400,8 +402,74 @@ std::shared_ptr<Node> createPatientMenu(SceneManager &manager){
         cardCont->addChild(cards->getEnd());
     });
 
-    root->setAtExitFunction([cards](){
+    Patient **foundPatientPTR = new Patient*(nullptr);
+
+    root->setAtExitFunction([cards, foundPatientPTR](){
         delete cards;
+        delete foundPatientPTR;
+    });
+
+    std::shared_ptr<NodeButton> viewFoundCard = std::make_shared<NodeButton>("ViewFoundCard", COORD{75, 100}, Color::MAGENTA, Color::BLACK, std::vector<std::string>{"[ Ver Tarjeta ]"});
+    viewFoundCard->setOnClick([&manager, root, foundPatientPTR](){
+        if (*foundPatientPTR) {
+            // Pass the found Patient pointer and the current scene (root) as the back scene
+            manager.changeScene(createSinglePatientCardView(manager, *foundPatientPTR));
+        }
+    });
+
+    std::shared_ptr<NodeUI> searchStatus = std::make_shared<NodeUI>("SearchStatus", COORD{32, 1}, std::vector<std::string>{"Busqueda:"});
+    // Search input buttons (using the same Input::getLineInput pattern)
+    auto searchByID = std::make_shared<NodeButton>("SearchID", COORD{32, 2}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por ID"});
+    auto searchByNatID = std::make_shared<NodeButton>("SearchNatID", COORD{32, 3}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por Cedula"});
+    auto searchByFName = std::make_shared<NodeButton>("SearchFName", COORD{32, 4}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por Nombre"});
+
+    // --- Search Logic ---
+
+    // Helper function to perform the search and update UI/state
+    auto performPatientSearch = [ searchStatus, foundPatientPTR, viewFoundCard, &manager, root](const std::string& query, const std::string& type) {
+        *foundPatientPTR = nullptr; // Reset previous result
+        hospital.patients.reset_iteration();
+        
+        for (int i = 0; i < hospital.patients.get_size(); ++i) {
+            Patient* currentPatient = hospital.patients.get_iteration();
+            bool match = false;
+            
+            if (type == "ID" && std::to_string(currentPatient->id) == query) {
+                match = true;
+            } else if (type == "NAT_ID" && std::string(currentPatient->nationalId) == query) {
+                match = true;
+            } else if (type == "FNAME" && std::string(currentPatient->firstName).find(query) != std::string::npos) {
+                match = true;
+            }
+
+            if (match) {
+                *foundPatientPTR = currentPatient;
+                searchStatus->set_text({"Busqueda: EXITO", "Encontrado: " + std::string(currentPatient->firstName) + " " + std::string(currentPatient->lastName)});
+                viewFoundCard->setLocalPosition(COORD{80, 1}); // Show the view button
+                return; 
+            }
+            hospital.patients.continue_iteration();
+        }
+        
+        // If loop finishes without finding anything
+        searchStatus->set_text({"Busqueda: FALLIDA No se encontro coincidencia."});
+        viewFoundCard->setLocalPosition(COORD{75, 100}); // Hide the view button
+    };
+
+    // Button Handlers
+    searchByID->setOnClick([searchByID, performPatientSearch](){
+        std::string input = Input::getLineInput(searchByID->getGlobalPosition() + COORD{20, 0});
+        performPatientSearch(input, "ID");
+    });
+
+    searchByNatID->setOnClick([searchByNatID, performPatientSearch](){
+        std::string input = Input::getLineInput(searchByNatID->getGlobalPosition() + COORD{20, 0});
+        performPatientSearch(input, "NAT_ID");
+    });
+
+    searchByFName->setOnClick([searchByFName, performPatientSearch](){
+        std::string input = Input::getLineInput(searchByFName->getGlobalPosition() + COORD{20, 0});
+        performPatientSearch(input, "FNAME");
     });
 
     std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("appointmentsButton", COORD{1, 5}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
@@ -423,7 +491,12 @@ std::shared_ptr<Node> createPatientMenu(SceneManager &manager){
         cardCont->setGlobalPosition({SHORT(1-progress * (amount * 65 + 40)), cardCont->getGlobalPosition().Y});
     });
 
-    root->addChild(mainMenuButton);
+    
+    root->addChild(searchStatus);
+    root->addChild(searchByID);
+    root->addChild(searchByNatID);
+    root->addChild(searchByFName);
+    root->addChild(viewFoundCard);
     root->addChild(createPatient);
     root->addChild(cardCont);
     cards->reset_iteration();
@@ -431,7 +504,7 @@ std::shared_ptr<Node> createPatientMenu(SceneManager &manager){
     root->addChild(sliderline);
     root->addChild(slider);
     root->addChild(border);
-
+    root->addChild(mainMenuButton);
     return root;
 }
 
@@ -641,6 +714,29 @@ std::shared_ptr<Node2D> createPatientCard(SceneManager &manager, COORD position,
     return root;
 }
 
+std::shared_ptr<Node> createSinglePatientCardView(SceneManager &manager, Patient *patientPTR){
+    std::shared_ptr<Node> root = std::make_shared<Node>("SinglePatientView");
+
+    std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BLACK, std::vector<std::string>{"[ VOLVER ]"});
+    backButton->setOnClick([&manager](){
+        manager.changeScene(createPatientMenu(manager));
+    });
+
+    // We need the ListElement pointers only for deletion/modification within a list, 
+    // which won't happen here, so we pass nullptrs for the ListElement arguments.
+    std::shared_ptr<Node2D> patientCard = createPatientCard(
+        manager,
+        COORD{2, 3}, 
+        patientPTR,
+        nullptr // No ListElement pointer needed for viewing
+    );
+    
+    root->addChild(backButton);
+    root->addChild(patientCard);
+    
+    return root;
+}
+
 std::shared_ptr<Node> createDoctorMenu(SceneManager &manager){
     std::shared_ptr<Node> root = std::make_shared<Node>("RootDoctors");
 
@@ -674,12 +770,80 @@ std::shared_ptr<Node> createDoctorMenu(SceneManager &manager){
         cardCont->addChild(cards->getEnd());
     });
 
-    // root->setProcessFunction([cards](double){
-        
-    // });
+    Doctor **foundDoctorPTR = new Doctor*(nullptr); 
 
-    root->setAtExitFunction([cards](){
+    root->setAtExitFunction([cards, foundDoctorPTR](){
         delete cards;
+        delete foundDoctorPTR;
+    });
+
+    
+    // Button to view the found doctor's card in a separate menu
+    std::shared_ptr<NodeButton> viewFoundCard = std::make_shared<NodeButton>("ViewFoundCard", COORD{75, 100}, Color::MAGENTA, Color::BLACK, std::vector<std::string>{"[ Ver Tarjeta ]"});
+    
+    // Placeholder to display the search result status/name
+    std::shared_ptr<NodeUI> searchStatus = std::make_shared<NodeUI>("SearchStatus", COORD{32, 1}, std::vector<std::string>{"Busqueda:"});
+    
+    // Search input buttons
+    auto searchByID = std::make_shared<NodeButton>("SearchID", COORD{32, 2}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por ID"});
+    auto searchByFName = std::make_shared<NodeButton>("SearchFName", COORD{32, 3}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por Nombre"});
+    auto searchBySpecialty = std::make_shared<NodeButton>("SearchSpecialty", COORD{32, 4}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por Especialidad"});
+    
+    // --- Search Logic ---
+    
+    // Helper function to perform the search and update UI/state
+    auto performDoctorSearch = [searchStatus, foundDoctorPTR, viewFoundCard, &manager](const std::string& query, const std::string& type) {
+        *foundDoctorPTR = nullptr; // Reset previous result
+        hospital.doctors.reset_iteration();
+        
+        for (int i = 0; i < hospital.doctors.get_size(); ++i) {
+            Doctor* currentDoctor = hospital.doctors.get_iteration();
+            bool match = false;
+            
+            if (type == "ID" && std::to_string(currentDoctor->id) == query) {
+                match = true;
+            } else if (type == "FNAME" && std::string(currentDoctor->firstName).find(query) != std::string::npos) {
+                match = true;
+            } else if (type == "SPECIALTY" && std::string(currentDoctor->specialty).find(query) != std::string::npos) {
+                match = true;
+            }
+    
+            if (match) {
+                *foundDoctorPTR = currentDoctor;
+                searchStatus->set_text({"Busqueda: EXITO", "Encontrado: " + std::string(currentDoctor->firstName) + " " + std::string(currentDoctor->lastName)});
+                viewFoundCard->setLocalPosition(COORD{80, 1}); // Show the view button
+                return; 
+            }
+            hospital.doctors.continue_iteration();
+        }
+        
+        searchStatus->set_text({"Busqueda: FALLIDA No se encontro coincidencia."});
+        viewFoundCard->setLocalPosition(COORD{75, 100}); // Hide the view button
+    };
+    
+    // Button Handlers
+    searchByID->setOnClick([searchByID, performDoctorSearch](){
+        std::string input = Input::getLineInput(searchByID->getGlobalPosition() + COORD{20, 0});
+        performDoctorSearch(input, "ID");
+    });
+    
+    searchByFName->setOnClick([searchByFName, performDoctorSearch](){
+        std::string input = Input::getLineInput(searchByFName->getGlobalPosition() + COORD{20, 0});
+        performDoctorSearch(input, "FNAME");
+    });
+    
+    searchBySpecialty->setOnClick([searchBySpecialty, performDoctorSearch](){
+        std::string input = Input::getLineInput(searchBySpecialty->getGlobalPosition() + COORD{20, 0});
+        performDoctorSearch(input, "SPECIALTY");
+    });
+    
+    // --- View Found Card Logic ---
+    
+    viewFoundCard->setOnClick([&manager, root, foundDoctorPTR](){
+        if (*foundDoctorPTR) {
+            // Pass the found Doctor pointer
+            manager.changeScene(createSingleDoctorCardView(manager, *foundDoctorPTR));
+        }
     });
 
     std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("appointmentsButton", COORD{0, 4}, Color::CYAN, Color::BLACK, std::vector<std::string>{
@@ -701,13 +865,18 @@ std::shared_ptr<Node> createDoctorMenu(SceneManager &manager){
         cardCont->setGlobalPosition({SHORT(-progress * (amount * 65 + 10)), cardCont->getGlobalPosition().Y});
     });
 
-    root->addChild(mainMenuButton);
+    root->addChild(searchStatus);
+    root->addChild(searchByID);
+    root->addChild(searchByFName);
+    root->addChild(searchBySpecialty);
+    root->addChild(viewFoundCard);
     root->addChild(createPatient);
     root->addChild(cardCont);
-        cards->reset_iteration();
-        for (int i = 0; i < hospital.doctors.get_size(); i++) { cardCont->addChild(cards->get_iteration()); cards->continue_iteration();}
+    cards->reset_iteration();
+    for (int i = 0; i < hospital.doctors.get_size(); i++) { cardCont->addChild(cards->get_iteration()); cards->continue_iteration();}
     root->addChild(sliderline);
     root->addChild(slider);
+    root->addChild(mainMenuButton);
 
     return root;
 }
@@ -882,6 +1051,28 @@ std::shared_ptr<Node2D> createDoctorCard(SceneManager &manager, COORD position, 
     root->addChild(deleteDoctor);
     root->addChild(confirmDelete);
 
+    return root;
+}
+
+std::shared_ptr<Node> createSingleDoctorCardView(SceneManager &manager, Doctor *doctorPTR){
+    std::shared_ptr<Node> root = std::make_shared<Node>("SingleDoctorView");
+
+    std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BLACK, std::vector<std::string>{"[ VOLVER ]"});
+    backButton->setOnClick([&manager](){
+        manager.changeScene(createDoctorMenu(manager));
+    });
+
+    // Pass nullptrs for the ListElement arguments since we are only viewing
+    std::shared_ptr<Node2D> doctorCard = createDoctorCard(
+        manager,
+        {2, 3}, 
+        doctorPTR, // Pass the main list for save/delete context
+        nullptr // No ListElement pointer needed for viewing
+    );
+    
+    root->addChild(backButton);
+    root->addChild(doctorCard);
+    
     return root;
 }
 
