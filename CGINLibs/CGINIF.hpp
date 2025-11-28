@@ -1,55 +1,36 @@
 #ifndef CGINIF_hpp
 #define CGINIF_hpp
 
-#include <windows.h>
-#include <fstream>
+#include "CGINFU.hpp"
 #include <iostream>
+#include <fstream>
 #include <string>
-#include <io.h>
-#include <fcntl.h>
-#include <stdexcept>
 
 namespace cfm {
 
-    // template<typename T> struct Entrie{
-    //     bool isActive;
-    //     T object;
-    // };
+    class Data{
+        std::string fileName = "Folder/index.idx";
+        
 
+        public:
 
-    bool createFolder(const std::string& path) {
-        if (CreateDirectoryA(path.c_str(), NULL)) {
-            return true;
+        Data() = default;
+        Data(std::string Name): fileName(Name + "/data.txt"){
+            std::cout<< "Data creada en " + fileName << std::endl;
+            std::fstream archivo(fileName, std::ios::in | std::ios::out);
         }
-        if (GetLastError() == ERROR_ALREADY_EXISTS) {
-            return true;
+
+        uint64_t getEndOfFile(){
+            std::fstream File(fileName, std::ios::in | std::ios::out | std::ios::binary | std::ios::ate);
+            uint64_t endOfFile = File.tellp();
+            return endOfFile;
         }
-        return false;
-    }
 
-    
-void truncateFile(const std::string& filename, std::streamoff new_size) {
-    // Abrir archivo en modo lectura/escritura binario
-    int fd = _open(filename.c_str(), _O_RDWR | _O_BINARY);
-    if (fd == -1) {
-        throw std::runtime_error("Error al abrir el archivo para truncar (Windows).");
-    }
-
-    // Usar la versión segura si está disponible (_chsize_s)
-    #if defined(_MSC_VER)
-        if (_chsize_s(fd, new_size) != 0) {
-            _close(fd);
-            throw std::runtime_error("Error al truncar el archivo (Windows).");
+        void add(std::string datos){
+            std::ofstream data(fileName, std::ios::app);
+            data << datos << std::endl;
         }
-    #else
-    if (_chsize(fd, static_cast<long>(new_size)) == -1) {
-        _close(fd);
-        throw std::runtime_error("Error al truncar el archivo (Windows).");
-    }
-    #endif 
-
-    _close(fd);
-}
+    };
 
     class Index{
         std::string indexFileName = "Folder/index.idx";
@@ -57,14 +38,6 @@ void truncateFile(const std::string& filename, std::streamoff new_size) {
         uint64_t nextID = 1;
         uint64_t amountOfFreeSpaces = 0;
         uint64_t amountOfEntries = 0;
-
-        uint64_t readHeader(){
-            std::ifstream index(indexFileName);
-            // uint64_t nextID;
-            index.read(reinterpret_cast<char*>(&nextID), sizeof(int64_t));
-            index.close();
-            return nextID;
-        }
 
         public:
         Index() = default;
@@ -140,8 +113,9 @@ void truncateFile(const std::string& filename, std::streamoff new_size) {
         uint64_t popFreeSpaces(){
             // 1. Validar que la pila no esté vacía
             if (amountOfFreeSpaces == 0) {
-                std::cout << "La pila de espacios libres está vacía." << std::endl;
-                return 0;
+                // std::cout << "La pila de espacios libres está vacía." << std::endl;
+                
+                return 1;
             }
             // Abrir el archivo en modo lectura/escritura binario
             std::fstream spaces_file(freeSpacesFileName, std::ios::binary | std::ios::in | std::ios::out);
@@ -187,7 +161,7 @@ void truncateFile(const std::string& filename, std::streamoff new_size) {
             
             // 3.4. Truncar el archivo a su nuevo tamaño
             // Esto elimina físicamente el último elemento del archivo.
-            truncateFile(freeSpacesFileName, new_file_size);
+            cfm::truncateFile(freeSpacesFileName, new_file_size);
             
             // --- 4. Sobrescribir el Contador (requiere reabrir o usar el mismo método de truncado) ---
             
@@ -227,29 +201,42 @@ void truncateFile(const std::string& filename, std::streamoff new_size) {
             return true;
         }
         
+        bool eraseFromIdx(uint64_t idx){
+            if(idx >= nextID){
+                //fuera de rango
+                return false;
+            }
+            std::fstream index(indexFileName, std::ios::binary | std::ios::in | std::ios::out);
+            std::streamoff offset = (1 + idx) * sizeof(uint64_t);
 
-        std::streampos add(){            
-            std::ofstream index(indexFileName, std::ios::app);
-            index << "Miau" << std::endl;
+            uint64_t actualPosInside;
+            index.seekg(offset, std::ios::beg);
+            index.read(reinterpret_cast<char*>(&actualPosInside), sizeof(uint64_t) );
+
+            if (actualPosInside == 0){
+                // 0 significa que ya fue eliminada esa posicion.
+                return false;
+            }
+            uint64_t zero = 0;
+            index.seekp(offset, std::ios::beg);
+            index.write(reinterpret_cast<char*>(&zero), sizeof(uint64_t));
+            if (!index) return false; //error de escritura
+
+            pushFreeSpaces(idx);
+
+            index.close();
+            return true;
+        };
+
+        std::streampos add(){
+            uint64_t whereToSave = popFreeSpaces();
+            std::fstream index(indexFileName, std::ios::app | std::ios::binary);
+            index.write(reinterpret_cast<char*>(&whereToSave), sizeof(uint64_t));
+
         }
     };
 
-    class Data{
-        std::string fileName = "Folder/index.idx";
-
-        public:
-
-        Data() = default;
-        Data(std::string Name): fileName(Name + "/data.txt"){
-            std::cout<< "Data creada en " + fileName << std::endl;
-            std::fstream archivo(fileName, std::ios::in | std::ios::out);
-        }
-
-        void add(std::string datos){
-            std::ofstream data(fileName, std::ios::app);
-            data << datos << std::endl;
-        }
-    };
+    
 
     template <typename T>
     class IndexedFile {
@@ -259,7 +246,7 @@ void truncateFile(const std::string& filename, std::streamoff new_size) {
 
         public:
         IndexedFile(std::string Name) : folderName(Name) {
-            createFolder(Name);
+            cfm::createFolder(Name);
             index = Index(Name);
             data = Data(Name);
         }
