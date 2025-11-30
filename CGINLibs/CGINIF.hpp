@@ -9,14 +9,14 @@
 namespace cfm {
 
     class Data{
-        std::string fileName = "Folder/index.idx";
-        
+        std::string fileName = "Folder/data.dat";
+        unsigned int sizeOfDataInUse = 4;
 
         public:
 
         Data() = default;
-        Data(std::string Name): fileName(Name + "/data.txt"){
-            std::cout<< "Data creada en " + fileName << std::endl;
+        Data(std::string Name, unsigned int Size): fileName(Name + "/data.dat"), sizeOfDataInUse(Size){
+            // std::cout<< "Data creada en " + fileName << std::endl;
             std::fstream archivo(fileName, std::ios::in | std::ios::out);
         }
 
@@ -26,9 +26,52 @@ namespace cfm {
             return endOfFile;
         }
 
-        void add(std::string datos){
-            std::ofstream data(fileName, std::ios::app);
-            data << datos << std::endl;
+        /**
+         * @brief Añade o modifica datos en el archivo en una posición específica.
+         *
+         * @param datos Puntero a los datos a escribir.
+         * @param pos Posición (offset) de inicio de la escritura en el archivo.
+         */
+        void addModify(char* datos, std::streampos pos) {
+            // 1. Abrir el archivo en modo binario, lectura y escritura
+            std::fstream dataFile(fileName, std::ios::binary | std::ios::in | std::ios::out);
+
+            if (!dataFile.is_open()) {
+                throw std::runtime_error("Error al abrir el archivo: " + fileName + ". Verifique permisos o existencia.");
+            }
+            // 2. Posicionar el puntero de escritura
+            dataFile.seekp(pos);
+
+            if (dataFile.fail()) {
+                dataFile.close();
+                throw std::runtime_error("Error al posicionar el puntero (seekp). Posición inválida o error interno del stream.");
+            }
+
+            // 3. Escribir los datos
+            dataFile.write(datos, sizeOfDataInUse);
+
+            if (dataFile.fail()) {
+                dataFile.close();
+                throw std::runtime_error("Error de escritura de datos.");
+            }
+            dataFile.close();
+        }
+
+        char* getDataAtPos(uint64_t pos){
+            char* dataBlob = new char[sizeOfDataInUse];
+            std::fstream dataFile(fileName, std::ios::binary | std::ios::in | std::ios::out);
+            if (!dataFile.is_open()) {
+                delete[] dataBlob;
+                throw std::runtime_error("Error al abrir el archivo: " + fileName);
+            }
+            dataFile.seekg(pos);
+            dataFile.read(dataBlob, sizeOfDataInUse);
+            if (dataFile.fail() && !dataFile.eof()) {
+                dataFile.close();
+                delete[] dataBlob;
+                throw std::runtime_error("Error de lectura de datos (I/O error).");
+            }
+            return dataBlob;
         }
     };
 
@@ -42,7 +85,7 @@ namespace cfm {
         public:
         Index() = default;
         Index(std::string Name): indexFileName(Name + "/index.idx"), freeSpacesFileName(Name + "/spaces.idx") {
-            std::cout<< "Index creado en " + indexFileName << std::endl;
+            // std::cout<< "Index creado en " + indexFileName << std::endl;
             
             std::ifstream checkIndexFile(indexFileName, std::ios::binary);
             if (checkIndexFile.is_open()) {
@@ -87,6 +130,8 @@ namespace cfm {
 
         }
 
+        bool isStackEmpty(){return amountOfFreeSpaces == 0;}
+
         bool pushFreeSpaces(uint64_t space){
             std::fstream spacesFile(freeSpacesFileName, std::ios::binary | std::ios::in | std::ios::out | std::ios::ate);
             
@@ -112,10 +157,8 @@ namespace cfm {
 
         uint64_t popFreeSpaces(){
             // 1. Validar que la pila no esté vacía
-            if (amountOfFreeSpaces == 0) {
-                // std::cout << "La pila de espacios libres está vacía." << std::endl;
-                
-                return 1;
+            if (isStackEmpty()) {
+                throw std::runtime_error("Error: Intento de obtener el espacio de la pila vacia");
             }
             // Abrir el archivo en modo lectura/escritura binario
             std::fstream spaces_file(freeSpacesFileName, std::ios::binary | std::ios::in | std::ios::out);
@@ -183,18 +226,20 @@ namespace cfm {
             return popped_space;
         }
 
+        uint64_t getAmountOfEntries(){return amountOfEntries;}
+        
         bool increaseAmountOfEntries(){
             amountOfEntries++;
-            std::fstream index(indexFileName, std::ios::out | std::ios::binary);
+            std::fstream index(indexFileName, std::ios::out | std::ios::in | std::ios::binary);
             index.seekp(sizeof(uint64_t), std::ios::beg);
             index.write(reinterpret_cast<const char*>(&amountOfEntries), sizeof(uint64_t));
             index.close();
             return true;
         }
 
-        bool reduceAmountOfEntries(){
+        bool decreaseAmountOfEntries(){
             amountOfEntries--;
-            std::ofstream index(indexFileName, std::ios::out | std::ios::binary);
+            std::fstream index(indexFileName, std::ios::out | std::ios::in | std::ios::binary);
             index.seekp(sizeof(uint64_t), std::ios::beg);
             index.write(reinterpret_cast<const char*>(&amountOfEntries), sizeof(uint64_t));
             index.close();
@@ -207,39 +252,50 @@ namespace cfm {
                 return false;
             }
             std::fstream index(indexFileName, std::ios::binary | std::ios::in | std::ios::out);
-            std::streamoff offset = (1 + idx) * sizeof(uint64_t);
+            //offset 2 espacios de header
+            std::streamoff offset = (2 + idx) * sizeof(uint64_t);
 
             uint64_t actualPosInside;
             index.seekg(offset, std::ios::beg);
             index.read(reinterpret_cast<char*>(&actualPosInside), sizeof(uint64_t) );
 
-            if (actualPosInside == 0){
-                // 0 significa que ya fue eliminada esa posicion.
+            uint64_t nullPos = 1;
+            if (actualPosInside == nullPos){
                 return false;
             }
-            uint64_t zero = 0;
+
             index.seekp(offset, std::ios::beg);
-            index.write(reinterpret_cast<char*>(&zero), sizeof(uint64_t));
+            index.write(reinterpret_cast<char*>(&nullPos), sizeof(uint64_t));
             if (!index) return false; //error de escritura
 
             pushFreeSpaces(idx);
 
             index.close();
+
+            decreaseAmountOfEntries();
+            
             return true;
         };
 
-        std::streampos add(){
-            uint64_t whereToSave = popFreeSpaces();
+        std::streampos addToIndex(){
             std::fstream index(indexFileName, std::ios::app | std::ios::binary);
+            uint64_t whereToSave = popFreeSpaces();
             index.write(reinterpret_cast<char*>(&whereToSave), sizeof(uint64_t));
-
+            increaseAmountOfEntries();
+            return whereToSave;
         }
+    
+        std::streampos getPosOfIDX(uint64_t idx){
+            std::fstream index(indexFileName, std::ios::binary | std::ios::in);
+            index.seekg((idx + 2) * sizeof(uint64_t), std::ios::beg);
+            uint64_t pos = 0;
+            index.read(reinterpret_cast<char*>(&pos), sizeof(uint64_t));
+            return pos;
+        }
+    
     };
 
-    
-
-    template <typename T>
-    class IndexedFile {
+    template <typename T> class IndexedFile {
         std::string folderName = "Folder";
         Index index;
         Data data;
@@ -248,12 +304,54 @@ namespace cfm {
         IndexedFile(std::string Name) : folderName(Name) {
             cfm::createFolder(Name);
             index = Index(Name);
-            data = Data(Name);
+            data = Data(Name, sizeof(T));
         }
 
-        void add(const T &object){
-            std::streampos = index.add();
-            data.add(reinterpret_cast<char*>object, sizeof(T));
+        void add(T &object){
+            if (index.isStackEmpty()) index.pushFreeSpaces(data.getEndOfFile());
+            std::streampos pos = index.addToIndex();
+            data.addModify(reinterpret_cast<char*>(&object), pos);
+        }
+
+        void eraseAtIdx(uint64_t idx){
+            index.eraseFromIdx(idx);
+        }
+
+        int64_t getListSize(){
+            return index.getAmountOfEntries();
+        }
+
+        T* getAtIDX(uint64_t idx){
+            // 1. Obtener la posición del dato en el archivo de datos principal
+            std::streampos pos = index.getPosOfIDX(idx); 
+            
+            // (Asumimos que getPosOfIDX(idx) ahora toma el índice y 1 es el valor de "no encontrado" o "eliminado")
+            if (pos == 1) return nullptr;
+            
+            // 2. Leer el bloque de bytes
+            // Suponemos que getDataAtPos(pos) lee sizeof(T) bytes y retorna un char*
+            char* dataBlob = data.getDataAtPos(pos); 
+        
+            if (dataBlob == nullptr) {
+                // Manejo de error si la lectura del archivo de datos falla
+                return nullptr;
+            }
+        
+            // --- RECONSTRUCCIÓN DEL OBJETO T ---
+            
+            // 3. Crear el espacio de memoria para el nuevo objeto T
+            // Usamos new T() para asegurar que la memoria se inicialice (opcional, pero seguro)
+            T* object = new T; 
+        
+            // 4. Copiar los bytes directamente del buffer al nuevo objeto
+            // memcpy es la herramienta estándar para la copia eficiente de bloques de memoria.
+            std::memcpy(object, dataBlob, sizeof(T)); 
+            
+            // 5. Liberar la memoria temporal del dataBlob
+            delete[] dataBlob; 
+            
+            // 6. Retornar el objeto reconstruido
+            return object;
         }
     };
 }
