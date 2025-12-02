@@ -661,6 +661,8 @@ class SceneManager {
 
         unsigned long int frameCount;
 
+        std::shared_ptr<Node> next_scene = nullptr; 
+
     public:
         static SceneManager& getInstance(){
             static SceneManager instance;
@@ -687,16 +689,7 @@ class SceneManager {
 
         void changeScene(std::shared_ptr<Node> newRoot) {
             if (newRoot == root_node) return;
-    
-            if (root_node) {
-                root_node->exitTree();
-            }
-    
-            root_node = newRoot;
-    
-            if (root_node) { 
-                root_node->enterTree();
-            }
+            next_scene = newRoot;
         }
     
         void startRunning() {
@@ -713,6 +706,17 @@ class SceneManager {
             ConsoleRenderer renderer = ConsoleRenderer({100, 60});
             while (this->is_running) {
         
+                if (next_scene){
+                    if (root_node) {
+                        root_node->exitTree();
+                    }
+                    root_node = next_scene;
+                    next_scene = nullptr;
+                    if (root_node) { 
+                        root_node->enterTree();
+                    }
+                }
+
                 if (this->is_running && this->root_node) {
 
                     renderer.clearBuffer();
@@ -722,7 +726,6 @@ class SceneManager {
                     this->root_node->draw(renderer);
                     renderer.present();
                     increaseFrameCount();
-
                 }
                 // Sleep(50);
             }

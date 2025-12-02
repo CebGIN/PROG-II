@@ -1,10 +1,13 @@
 #include "../CGINLibs/LegacyEngine.hpp"
 #include "../CGINLibs/CGINDE.hpp"
+#include "../CGINLibs/CGINIF.hpp"
+#include "Hospital/hospital.hpp"
 #include "Appoinment/appoinment.hpp"
 #include "Patient/patient.hpp"
 #include "Doctor/doctor.hpp"
 #include <cassert>
 #include <cstring>
+#include <vector>
 
 struct Doctor;
 struct Patient;
@@ -20,17 +23,8 @@ struct MedicalRecord {
     float cost;
 };
 
-struct Hospital {
-    char name[100];
-    char address[150];
-    char phone[15];
-    
-    cde::LinkedList<Patient*> patients;
-    cde::LinkedList<Doctor*> doctors;
-    cde::LinkedList<Appointment*> appointments;
-};
 
-Hospital hospital;
+hos::Hospital hospital;
 
 std::shared_ptr<NodeSQ> confirmDialog(std::function<void()> onConfirm){
     std::shared_ptr<NodeSQ> square = std::make_shared<NodeSQ>("Cuadro", COORD{300, 300}, COORD{27, 6}, Color::RED, Color::RED);
@@ -127,19 +121,24 @@ std::shared_ptr<Node> createPatientMenu(){
     std::shared_ptr<Node> root = std::make_shared<Node>("RootPatients");
     std::shared_ptr<NodeSQ> border = std::make_shared<NodeSQ>("PatientsBorder", COORD{0, 0}, COORD{100, 40}, Color::YELLOW, Color::YELLOW);
     std::shared_ptr<Node2D> cardCont = std::make_shared<Node2D>("cardCont", COORD{0, 6});
-
+    
     cde::LinkedList<std::shared_ptr<Node2D>> *cards = new cde::LinkedList<std::shared_ptr<Node2D>>();
-
-    // hospital.patients.reset_iteration();
-    // for (int i = 0; i < hospital.patients.get_size(); i++){
-    //     cards->push_back(createPatientCard({SHORT(i*65), 0}, hospital.patients.get_iteration(), hospital.patients.get_iteration_LE()) ) ;
-    //     hospital.patients.continue_iteration();
-    // }
+    
+    std::shared_ptr<std::vector<std::unique_ptr<ptn::Patient>>> loadedPatients;
+    loadedPatients->reserve(hospital.patients.getListSize() * 1.5);
+    
+    for (int i = 0; i < hospital.patients.getTotalIDXs(); i++){
+        auto patient = hospital.patients.getAtIDX(i);
+        if (!patient) continue;
+        cards->push_back(patient->createCard()); 
+        loadedPatients->push_back(std::move(patient));
+    }
 
     std::shared_ptr<NodeButton> mainMenuButton = std::make_shared<NodeButton>("mainMenuButton", COORD{1, 1}, Color::RED, Color::BLACK, std::vector<std::string>{
         ".----------------.",
         "| Menu principal |",
         "'----------------'"});
+
     mainMenuButton->setOnClick([](){
         SceneManager::getInstance().changeScene(createMainMenu());
     });
@@ -149,15 +148,14 @@ std::shared_ptr<Node> createPatientMenu(){
         "| Nuevo |",
         "'-------'"});
     
-    // createPatient->setOnClick([cardCont, cards](){
-    //     Patient* newPatientPTR = new Patient();
-    //     newPatientPTR->id = Patient::nextId++;
-    //     hospital.patients.push_back(newPatientPTR);
-    //     cards->push_back( createPatientCard({ SHORT( cards->get_size() * 65 ), 0 } , newPatientPTR, hospital.patients.get_end()) );
-    //     cardCont->addChild(cards->get_end()->get());
-    // });
+    createPatient->setOnClick([loadedPatients, cardCont, cards](){
+        loadedPatients->emplace_back(std::make_unique<ptn::Patient>(hospital.patients.getTotalIDXs() + 2));
+        hospital.patients.add(*(loadedPatients->back()));
+        cards->push_back(loadedPatients->back()->createCard());
+        cardCont->addChild(cards->get_end()->get());
+    });
 
-    Patient **foundPatientPTR = new Patient*(nullptr);
+    ptn::Patient **foundPatientPTR = new ptn::Patient*(nullptr);
 
     root->setAtExitFunction([cards, foundPatientPTR](){
         delete cards;
@@ -181,30 +179,27 @@ std::shared_ptr<Node> createPatientMenu(){
     // --- Search Logic ---
 
     // Helper function to perform the search and update UI/state
-    auto performPatientSearch = [ searchStatus, foundPatientPTR, viewFoundCard, root](const std::string& query, const std::string& type) {
+    auto performPatientSearch = [loadedPatients, searchStatus, foundPatientPTR, viewFoundCard, root](const std::string& query, const std::string& type) {
         *foundPatientPTR = nullptr; // Reset previous result
         
-        cde::ListElement<Patient*>* currentPatientLE = nullptr;
-        while(hospital.patients.go_through(currentPatientLE)){
-            Patient* currentPatient = currentPatientLE->get();
+        for (const std::unique_ptr<ptn::Patient>& patient : *loadedPatients){
             bool match = false;
             
-            if (type == "ID" && std::to_string(currentPatient->getID()) == query) {
+            if (type == "ID" && std::to_string(patient->getID()) == query) {
                 match = true;
-            } else if (type == "NAT_ID" && std::string(currentPatient->getNationalID()) == query) {
+            } else if (type == "NAT_ID" && std::string(patient->getNationalID()) == query) {
                 match = true;
-            } else if (type == "FNAME" && std::string(currentPatient->getFirstName()).find(query) != std::string::npos) {
+            } else if (type == "FNAME" && std::string(patient->getFirstName()).find(query) != std::string::npos) {
                 match = true;
             }
 
             if (match) {
-                *foundPatientPTR = currentPatient;
-                searchStatus->set_text({"Busqueda: EXITO", "Encontrado: " + std::string(currentPatient->getFirstName()) + " " + std::string(currentPatient->getLastName())});
+                *foundPatientPTR = patient.get();
+                searchStatus->set_text({"Busqueda: EXITO", "Encontrado: " + std::string(patient->getFirstName()) + " " + std::string(patient->getLastName())});
                 viewFoundCard->setLocalPosition(COORD{80, 1}); // Show the view button
-                return; 
+                return;
             }
         }
-        
         // If loop finishes without finding anything
         searchStatus->set_text({"Busqueda: FALLIDA No se encontro coincidencia."});
         viewFoundCard->setLocalPosition(COORD{75, 100}); // Hide the view button
@@ -262,7 +257,7 @@ std::shared_ptr<Node> createPatientMenu(){
     return root;
 }
 
-std::shared_ptr<Node> createSinglePatientCardView(Patient *patientPTR){
+std::shared_ptr<Node> createSinglePatientCardView(ptn::Patient *patientPTR){
     std::shared_ptr<Node> root = std::make_shared<Node>("SinglePatientView");
 
     std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BLACK, std::vector<std::string>{"[ VOLVER ]"});
@@ -338,49 +333,49 @@ std::shared_ptr<Node> createDoctorMenu(){
     
     // --- Search Logic ---
     
-    // Helper function to perform the search and update UI/state
-    auto performDoctorSearch = [searchStatus, foundDoctorPTR, viewFoundCard](const std::string& query, const std::string& type) {
-        *foundDoctorPTR = nullptr; // Reset previous result
+    // // Helper function to perform the search and update UI/state
+    // auto performDoctorSearch = [searchStatus, foundDoctorPTR, viewFoundCard](const std::string& query, const std::string& type) {
+    //     *foundDoctorPTR = nullptr; // Reset previous result
 
-        cde::ListElement<Doctor*>* currentDoctor = nullptr;
-        while(hospital.doctors.go_through(currentDoctor)){
-            bool match = false;
+    //     cde::ListElement<Doctor*>* currentDoctor = nullptr;
+    //     while(hospital.doctors.go_through(currentDoctor)){
+    //         bool match = false;
             
-            if (type == "ID" && std::to_string(currentDoctor->get()->getID()) == query) {
-                match = true;
-            } else if (type == "FNAME" && std::string(currentDoctor->get()->getFirstName()).find(query) != std::string::npos) {
-                match = true;
-            } else if (type == "SPECIALTY" && std::string(currentDoctor->get()->getSpecialty()).find(query) != std::string::npos) {
-                match = true;
-            }
+    //         if (type == "ID" && std::to_string(currentDoctor->get()->getID()) == query) {
+    //             match = true;
+    //         } else if (type == "FNAME" && std::string(currentDoctor->get()->getFirstName()).find(query) != std::string::npos) {
+    //             match = true;
+    //         } else if (type == "SPECIALTY" && std::string(currentDoctor->get()->getSpecialty()).find(query) != std::string::npos) {
+    //             match = true;
+    //         }
     
-            if (match) {
-                *foundDoctorPTR = currentDoctor->get();
-                searchStatus->set_text({"Busqueda: EXITO", "Encontrado: " + std::string(currentDoctor->get()->getFirstName()) + " " + std::string(currentDoctor->get()->getLastName())});
-                viewFoundCard->setLocalPosition(COORD{80, 1}); // Show the view button
-                return;
-            }
-        }
+    //         if (match) {
+    //             *foundDoctorPTR = currentDoctor->get();
+    //             searchStatus->set_text({"Busqueda: EXITO", "Encontrado: " + std::string(currentDoctor->get()->getFirstName()) + " " + std::string(currentDoctor->get()->getLastName())});
+    //             viewFoundCard->setLocalPosition(COORD{80, 1}); // Show the view button
+    //             return;
+    //         }
+    //     }
         
-        searchStatus->set_text({"Busqueda: FALLIDA No se encontro coincidencia."});
-        viewFoundCard->setLocalPosition(COORD{75, 100}); // Hide the view button
-    };
+    //     searchStatus->set_text({"Busqueda: FALLIDA No se encontro coincidencia."});
+    //     viewFoundCard->setLocalPosition(COORD{75, 100}); // Hide the view button
+    // };
     
-    // Button Handlers
-    searchByID->setOnClick([searchByID, performDoctorSearch](){
-        std::string input = Input::getLineInput(searchByID->getGlobalPosition() + COORD{20, 0});
-        performDoctorSearch(input, "ID");
-    });
+    // // Button Handlers
+    // searchByID->setOnClick([searchByID, performDoctorSearch](){
+    //     std::string input = Input::getLineInput(searchByID->getGlobalPosition() + COORD{20, 0});
+    //     performDoctorSearch(input, "ID");
+    // });
     
-    searchByFName->setOnClick([searchByFName, performDoctorSearch](){
-        std::string input = Input::getLineInput(searchByFName->getGlobalPosition() + COORD{20, 0});
-        performDoctorSearch(input, "FNAME");
-    });
+    // searchByFName->setOnClick([searchByFName, performDoctorSearch](){
+    //     std::string input = Input::getLineInput(searchByFName->getGlobalPosition() + COORD{20, 0});
+    //     performDoctorSearch(input, "FNAME");
+    // });
     
-    searchBySpecialty->setOnClick([searchBySpecialty, performDoctorSearch](){
-        std::string input = Input::getLineInput(searchBySpecialty->getGlobalPosition() + COORD{20, 0});
-        performDoctorSearch(input, "SPECIALTY");
-    });
+    // searchBySpecialty->setOnClick([searchBySpecialty, performDoctorSearch](){
+    //     std::string input = Input::getLineInput(searchBySpecialty->getGlobalPosition() + COORD{20, 0});
+    //     performDoctorSearch(input, "SPECIALTY");
+    // });
     
     
     viewFoundCard->setOnClick([root, foundDoctorPTR](){

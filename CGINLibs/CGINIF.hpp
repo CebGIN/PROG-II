@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstring>
 #include <memory>
 
 namespace cfm {
@@ -160,11 +161,8 @@ namespace cfm {
         }
 
         void eraseFromIdx(uint64_t idx){
-            // 1. Verificación de Rango (usando nextID, asumiendo que es el límite superior no inclusivo)
-            // El límite se basa en cuántos IDs se han generado, no en cuántos existen actualmente.
-            // **NOTA:** Esta verificación está comentada en tu código original, pero se incluye para completitud.
             if (idx >= nextIDX){
-                throw std::out_of_range("Error: Intento de eliminar un indice fuera del rango generado.");
+                throw std::out_of_range("Error: Intento de eliminar un indice fuera del rango generado. IDX: " + std::to_string(idx));
             }
             
             // El offset es: (Tamaño del Header: 2x uint64_t) + (Posición del Índice)
@@ -221,7 +219,7 @@ namespace cfm {
             return whereToSave;
         }
     
-        uint64_t getPosOfIDX(uint64_t idx){
+        uint64_t getPosOfIDX(uint64_t idx) {
             if (idx >= nextIDX){
                 return UINT64_MAX;
             }
@@ -230,7 +228,8 @@ namespace cfm {
             indexFile.read(reinterpret_cast<char*>(&pos), sizeof(uint64_t));
             return pos;
         }
-    
+        
+        uint64_t getNextIDX() const {return nextIDX;}
     };
 
     template <typename T> class IndexedFile {
@@ -246,15 +245,26 @@ namespace cfm {
             index(Name),
             data(Name, sizeof(T)) {}
 
-        void add(const T &object){
+        uint64_t getTotalIDXs() const {
+            return index.getNextIDX();
+        }
+
+        uint64_t add(const T &object){
             cfm::FileStack<uint64_t>& stackREF = index.getSpaces();
             if (stackREF.isStackEmpty()) stackREF.push(data.getEndOfFile());
             std::streampos pos = index.addToIndex();
             data.addModify(reinterpret_cast<const char*>(&object), pos);
+            return index.getNextIDX();
         }
 
         void eraseAtIdx(uint64_t idx){
             index.eraseFromIdx(idx);
+        }
+
+        void modifyAtIdx(uint64_t idx, const T &object) {
+            uint64_t pos = index.getPosOfIDX(idx);
+            if (pos == UINT64_MAX) throw std::out_of_range("Error: Intento de sobreescribir un indice fuera del rango generado. IDX: " + std::to_string(idx) + " Pos: " + std::to_string(pos));; //Intento de modificar un indice que ya fue eliminado o es invalido
+            data.addModify(reinterpret_cast<const char*>(&object), pos);
         }
 
         int64_t getListSize(){

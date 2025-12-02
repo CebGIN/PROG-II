@@ -1,6 +1,6 @@
 #ifndef CGINDE_HPP
 #define CGINDE_HPP
-
+#include <stdexcept>
 namespace cde{
 template<typename T> class LinkedList;
 
@@ -108,10 +108,7 @@ public:
     }
 
     void remove_at(int idx){
-        if (idx < 0 || idx >= size) {
-            assert(false && "Out of range index");
-            return;
-        }
+        if (idx < 0 || idx >= size) throw std::out_of_range("Intento eliimnar fuera de rango");
 
         ListElement<T>* element = getListElement(idx);
         remove_by_LE(element); // Delegate removal logic to the robust private method
