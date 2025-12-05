@@ -66,5 +66,35 @@ namespace pui {
         line->addChild(slider);
         return line;
     }
+    std::shared_ptr<NodeSQ> vSlider(std::shared_ptr<Node2D> container, std::shared_ptr<int> offset, int size = 100) {
+        std::shared_ptr<NodeSQ> line = std::make_shared<NodeSQ>("VLine", COORD{0, 0}, COORD{1, SHORT(size)}, Color::BRIGHT_YELLOW, Color::BLACK);
+
+        std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("vSliderButton", COORD{0, 0}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
+            "-","|","|","-"
+        });
+    
+        slider->setProcessFunction([line, slider, container, offset, size](double) {
+            // La altura del slider es de 1 (una línea de texto), y el límite es: tamaño de la línea - altura del slider.
+            SHORT limit = size - 4;
+            static bool moving;
+    
+            // 3. Detección de clic: Comprobar la coordenada Y dentro del rango 'size' de la línea y la coordenada X en la posición de la línea.
+            if (Input::MousePos.X == line->getGlobalPosition().X &&
+                Input::MousePos.Y >= line->getGlobalPosition().Y &&
+                Input::MousePos.Y < (line->getGlobalPosition().Y + size) &&
+                Input::LClickJustPressed) moving = true;
+    
+            if (!Input::LClick) moving = false;
+    
+            if (moving)
+                slider->setGlobalPosition({line->getGlobalPosition().X, std::max(std::min(Input::MousePos.Y, SHORT(line->getGlobalPosition().Y + limit)), line->getGlobalPosition().Y)});
+    
+            float progress = ((slider->getGlobalPosition().Y - line->getLocalPosition().Y) / float(limit));
+            container->setGlobalPosition({container->getGlobalPosition().X, SHORT(-progress * *offset)});
+        });
+    
+        line->addChild(slider);
+        return line;
+    }
 }
 #endif

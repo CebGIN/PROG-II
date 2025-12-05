@@ -55,6 +55,6 @@ int main(){
     loadedlist->clear();
     system("pause");
     // SceneManager::getInstance().changeScene(loadedlist->at(0)->createCard(hospital.patients));
-    SceneManager::getInstance().changeScene(hos::CreateHospitalMenu(hospital));
+    SceneManager::getInstance().changeScene(hos::createMenu(hospital));
     SceneManager::getInstance().startRunning();
 }

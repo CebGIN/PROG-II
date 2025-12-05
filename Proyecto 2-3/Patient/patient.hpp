@@ -24,13 +24,8 @@ namespace ptn{
         char email[50] = "default@dominio";
         char allergies[500] = "Default";
         char notes[500] = "Default";
-        
-        bool isActive;
 
         std::weak_ptr<Node2D> card;
-
-        char historyRoute[20];
-        char AppoinmentsRoute[20];
 
         public :
         Patient() = default;
@@ -40,53 +35,52 @@ namespace ptn{
             Patient copy = *this;
             copy.eraseCard();
             list.modifyAtIdx(idx, copy);
-            // try{
-            // }catch(...){
-            //     return false;
-            // }
             return true;
         }
         void erasefrom(cfm::IndexedFile<Patient> &list) {list.eraseAtIdx(id);}
+        
         int getID() const {return id;}
 
-        std::string getFirstName() const {return std::string(firstName);}
-        void setFirstName(std::string value) {strncpy(firstName, value.c_str(), 49);}
+        // --- Getters & Setters con null-terminator asegurado ---
+        std::string getFirstName() const { return std::string(firstName); }
+        void setFirstName(const std::string& value) {std::strncpy(firstName, value.c_str(), sizeof(firstName) - 1); firstName[sizeof(firstName) - 1] = '\0';}
 
-        std::string getLastName() const {return std::string(lastName);}
-        void setLastName(std::string value) {strncpy(lastName, value.c_str(), 49);}
+        std::string getLastName() const { return std::string(lastName); }
+        void setLastName(const std::string& value) {std::strncpy(lastName, value.c_str(), sizeof(lastName) - 1); lastName[sizeof(lastName) - 1] = '\0';}
 
-        std::string getNationalID() const {return std::string(nationalId);}
-        void setNationalID(std::string value) {strncpy(nationalId, value.c_str(), 19);}
+        std::string getNationalID() const { return std::string(nationalId); }
+        void setNationalID(const std::string& value) {std::strncpy(nationalId, value.c_str(), sizeof(nationalId) - 1); nationalId[sizeof(nationalId) - 1] = '\0';}
 
-        int getAge() const {return static_cast<int>(age);}
-        bool setAge(uint8_t value) {age = std::min(value, uint8_t(150)); return value <= uint8_t(150);}
-        
-        char getGender() const {return gender;}
-        void setGender(char n) {((n == 'f' || n == 'F' || n == 'm' || n == 'M') ? gender = n : gender = '?');}
+        int getAge() const { return static_cast<int>(age); }
+        bool setAge(uint8_t value) {age = std::min(value, uint8_t(150));return value <= uint8_t(150);}
 
-        std::string getBloodType() const {return std::string(bloodType);}
-        void setBloodType(std::string value) {strncpy(bloodType, value.c_str(), 4);}
+        char getGender() const { return gender; }
+        void setGender(char n) {gender = (n == 'f' || n == 'F' || n == 'm' || n == 'M') ? n : '?';}
 
-        std::string getPhone() const {return std::string(phone);}
-        void setPhone(std::string value) {strncpy(phone, value.c_str(), 14);}
+        std::string getBloodType() const { return std::string(bloodType); }
+        void setBloodType(const std::string& value) {std::strncpy(bloodType, value.c_str(), sizeof(bloodType) - 1);bloodType[sizeof(bloodType) - 1] = '\0';}
 
-        std::string getAddress() const {return std::string(address);}
-        void setAddress(std::string value) {strncpy(address, value.c_str(), 99);}
+        std::string getPhone() const { return std::string(phone); }
+        void setPhone(const std::string& value) {std::strncpy(phone, value.c_str(), sizeof(phone) - 1);phone[sizeof(phone) - 1] = '\0';}
 
-        std::string getEmail() const {return std::string(email);}
-        void setEmail(std::string value) {strncpy(email, value.c_str(), 49);}
+        std::string getAddress() const { return std::string(address); }
+        void setAddress(const std::string& value) {std::strncpy(address, value.c_str(), sizeof(address) - 1); address[sizeof(address) - 1] = '\0';}
 
-        std::string getAllergies() const {return std::string(allergies);}
-        void setAllergies(std::string value) {strncpy(allergies, value.c_str(), 499);}
+        std::string getEmail() const { return std::string(email); }
+        void setEmail(const std::string& value) {std::strncpy(email, value.c_str(), sizeof(email) - 1); email[sizeof(email) - 1] = '\0';}
 
-        std::string getNotes() const {return std::string(notes);}
-        void setNotes(std::string value) {strncpy(notes, value.c_str(), 99);}
+        std::string getAllergies() const { return std::string(allergies); }
+        void setAllergies(const std::string& value) {std::strncpy(allergies, value.c_str(), sizeof(allergies) - 1); allergies[sizeof(allergies) - 1] = '\0';}
+
+        std::string getNotes() const { return std::string(notes); }
+        void setNotes(const std::string& value) {std::strncpy(notes, value.c_str(), sizeof(notes) - 1); notes[sizeof(notes) - 1] = '\0';}
 
         std::weak_ptr<Node2D> getCard() {return card;}
         void eraseCard(){card.reset();}
 
-        std::shared_ptr<Node2D> createCard(cfm::IndexedFile<ptn::Patient> &list){
+        std::shared_ptr<Node2D> createCard(cfm::IndexedFile<Patient> &list){
             auto root = std::make_shared<Node2D>("pivot", COORD{0, 0});
+            std::shared_ptr<NodeSQ> square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{64, 14}, Color::BRIGHT_YELLOW, Color::BRIGHT_YELLOW);
             
             auto label = std::make_shared<NodeUI>("label", COORD{7, 1}, std::vector<std::string>{
                 "Paciente N:"   + std::to_string(id + 1),
@@ -120,8 +114,6 @@ namespace ptn{
             deletePatient->setOnClick([confirmDelete](){
                 confirmDelete->setGlobalPosition(COORD{25, 8});
             });
-        
-            std::shared_ptr<NodeSQ> square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{64, 14}, Color::BRIGHT_YELLOW, Color::BRIGHT_YELLOW);
         
             std::function<void()> update_patient_label = [this, label](){
                 std::vector<std::string> labelText = label->getText();
@@ -229,17 +221,7 @@ namespace ptn{
                 update_patient_label();
                 saveChanges->setLocalPosition(COORD{42, 12});
             });
-        
-            auto goToAppointments = std::make_shared<NodeButton>("checkAppointments", COORD{-6, 12}, Color::BRIGHT_GREEN, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Ver citas]"});
-            goToAppointments->setOnClick([this](){
-                // SceneManager::getInstance().changeScene();
-            });
-        
-            auto goToRecords = std::make_shared<NodeButton>("checkRecords", COORD{5, 12}, Color::CYAN, Color::BRIGHT_YELLOW, std::vector<std::string>{"[ Ver Expediente ]"});
-            goToRecords->setOnClick([this, root](){
-                // The current patient menu will be the back scene
-                // SceneManager::getInstance().changeScene(createMedicalRecordViewer(this)); 
-            });
+
         
             root->addChild(square);
             root->addChild(label);
@@ -254,8 +236,6 @@ namespace ptn{
                 label->addChild(editEmail);
                 label->addChild(editAllergies);
                 label->addChild(editNotes);
-                label->addChild(goToAppointments);
-                label->addChild(goToRecords);
             root->addChild(saveChanges);
             root->addChild(deletePatient);
             root->addChild(confirmDelete);
@@ -263,7 +243,6 @@ namespace ptn{
             card = root;
             return root;
         }
-
     };
     
 
