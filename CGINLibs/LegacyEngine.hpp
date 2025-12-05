@@ -323,7 +323,7 @@ public:
         if (index < Children.size()) {
             return Children[index];
         } else {
-            throw std::out_of_range("Node::getChild(index): Index out of bounds.");
+            throw std::out_of_range("Node::getChild(index): Index out of bounds. en: " + name);
         }
     }
 
