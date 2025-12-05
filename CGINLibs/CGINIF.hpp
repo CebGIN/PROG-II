@@ -97,7 +97,6 @@ namespace cfm {
         uint64_t nextIDX = 0;
         uint64_t amountOfEntries = 0;
         
-        
         std::string fileName = "Folder/index.idx";
         cfm::FileStack<uint64_t> freeSpaces;
         
@@ -179,7 +178,7 @@ namespace cfm {
             
             if (indexFile.fail() && !indexFile.eof()) {
                 indexFile.clear();
-                throw std::runtime_error("Error I/O: Fallo al leer la entrada del índice.");
+                throw std::runtime_error("Error I/O: Fallo al leer la entrada del indice.");
             }
 
             uint64_t nullPos = UINT64_MAX;
@@ -263,7 +262,7 @@ namespace cfm {
 
         void modifyAtIdx(uint64_t idx, const T &object) {
             uint64_t pos = index.getPosOfIDX(idx);
-            if (pos == UINT64_MAX) throw std::out_of_range("Error: Intento de sobreescribir un indice fuera del rango generado. IDX: " + std::to_string(idx) + " Pos: " + std::to_string(pos));; //Intento de modificar un indice que ya fue eliminado o es invalido
+            if (pos == UINT64_MAX) throw std::out_of_range("Error: Intento de sobreescribir un indice fuera del rango generado en: " + folderName +  ", IDX: " + std::to_string(idx) + " Pos: " + std::to_string(pos));; //Intento de modificar un indice que ya fue eliminado o es invalido
             data.addModify(reinterpret_cast<const char*>(&object), pos);
         }
 
