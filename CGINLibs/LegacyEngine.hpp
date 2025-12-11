@@ -191,9 +191,12 @@ public:
     }
     // Limpia el búfer con espacios y atributos por defecto
     void clearBuffer() {
+        // CHAR_INFO emptyCharInfo;
+        // emptyCharInfo.Char.UnicodeChar = L' '; // Usar L' ' para wchar_t
+        // emptyCharInfo.Attributes = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; // Blanco por defecto
         CHAR_INFO emptyCharInfo;
-        emptyCharInfo.Char.UnicodeChar = L' '; // Usar L' ' para wchar_t
-        emptyCharInfo.Attributes = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; // Blanco por defecto
+        emptyCharInfo.Char.UnicodeChar = L' '; // espacio en wchar_t
+        emptyCharInfo.Attributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE; 
 
         for (size_t i = 0; i < screenBuffer.size(); ++i) {
             screenBuffer[i] = emptyCharInfo;
