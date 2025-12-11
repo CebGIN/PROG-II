@@ -91,7 +91,7 @@ namespace doc{
             });
         
             std::shared_ptr<NodeButton> saveChanges = std::make_shared<NodeButton>("saveChanges", COORD{50, 100}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{
-                "[Guardar]",});
+                "[ Guardar ]"});
             saveChanges->setOnClick([this, &list, saveChanges](){
                 this->saveAtIn(id, list);
                 saveChanges->setLocalPosition(COORD{300, 300});
@@ -100,7 +100,6 @@ namespace doc{
             std::shared_ptr<NodeSQ> confirmDelete = pui::confirmDialog([this, &list](){
                 this->erasefrom(list);
                 card.lock()->setGlobalPosition(COORD{300, 300});
-                //Falta logica para eliminar los appoinments
             });
             
             std::shared_ptr<NodeButton> deleteDoctor = std::make_shared<NodeButton>("deletePatient", COORD{58, 1}, Color::RED, Color::BRIGHT_CYAN, std::vector<std::string>{" X "});
@@ -192,9 +191,6 @@ namespace doc{
                 update_doctor_label();
                 saveChanges->setLocalPosition(COORD{43, 10});
             });
-        
-            //     SceneManager::getInstance().changeScene(checkAppointmentsOf(nullptr, this, 2));
-            // });
         
             root->addChild(square);
             root->addChild(label);

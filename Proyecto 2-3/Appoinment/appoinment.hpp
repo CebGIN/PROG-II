@@ -60,13 +60,15 @@ namespace app{
             // }
             return true;
         }
-        void erasefrom(cfm::IndexedFile<doc::Doctor> &list) {list.eraseAtIdx(id);}
+        void erasefrom(cfm::IndexedFile<app::Appointment> &list) {list.eraseAtIdx(id);}
         
         std:: shared_ptr<Node2D> createCard(cfm::IndexedFile<Appointment> &list, cfm::IndexedFile<ptn::Patient> &patients, cfm::IndexedFile<doc::Doctor> &doctors, int contextFlag){
             auto root = std::make_shared<Node2D>("pivot");
             
             std::shared_ptr<ptn::Patient> patient = patients.getAtIDX(patientID);
             std::shared_ptr<doc::Doctor> doctor = doctors.getAtIDX(doctorID);
+
+            if(!patient || !doctor) return nullptr;
             
             auto label = std::make_shared<NodeUI>("label", COORD{7, 1}, std::vector<std::string>{
                 "Cita N:" + std::to_string(getID()),

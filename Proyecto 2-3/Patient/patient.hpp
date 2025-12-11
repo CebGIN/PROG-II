@@ -38,10 +38,9 @@ namespace ptn{
             return true;
         }
         void erasefrom(cfm::IndexedFile<Patient> &list) {list.eraseAtIdx(id);}
-        
+
         int getID() const {return id;}
 
-        // --- Getters & Setters con null-terminator asegurado ---
         std::string getFirstName() const { return std::string(firstName); }
         void setFirstName(const std::string& value) {std::strncpy(firstName, value.c_str(), sizeof(firstName) - 1); firstName[sizeof(firstName) - 1] = '\0';}
 
@@ -52,7 +51,7 @@ namespace ptn{
         void setNationalID(const std::string& value) {std::strncpy(nationalId, value.c_str(), sizeof(nationalId) - 1); nationalId[sizeof(nationalId) - 1] = '\0';}
 
         int getAge() const { return static_cast<int>(age); }
-        bool setAge(uint8_t value) {age = std::min(value, uint8_t(150));return value <= uint8_t(150);}
+        bool setAge(uint8_t value) {age = std::min(value, uint8_t(150)); return value <= uint8_t(150);}
 
         char getGender() const { return gender; }
         void setGender(char n) {gender = (n == 'f' || n == 'F' || n == 'm' || n == 'M') ? n : '?';}
@@ -107,7 +106,6 @@ namespace ptn{
             std::shared_ptr<NodeSQ> confirmDelete = pui::confirmDialog([this, &list](){
                 this->erasefrom(list);
                 card.lock()->setGlobalPosition(COORD{300, 300});
-                //Falta logica para eliminar los appoinments
             });
             
             std::shared_ptr<NodeButton> deletePatient = std::make_shared<NodeButton>("deletePatient", COORD{58, 1}, Color::RED, Color::BRIGHT_YELLOW, std::vector<std::string>{" X "});
