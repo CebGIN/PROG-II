@@ -2,6 +2,7 @@
 #define DOCTOR_HPP
 
 #include "../../CGINLibs/LegacyEngine.hpp"
+#include "../../CGINLibs/CGINIF.hpp"
 #include "../../CGINLibs/UIPrefabs.hpp"
 #include <cstdint>
 
