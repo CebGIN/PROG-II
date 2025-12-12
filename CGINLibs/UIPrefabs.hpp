@@ -42,9 +42,9 @@ namespace pui {
         return square;
     }
 
-    std::shared_ptr<NodeSQ> hSlider(std::shared_ptr<Node2D> container, std::shared_ptr<int> offset, int size = 100){
-        std::shared_ptr<NodeSQ> line = std::make_shared<NodeSQ>("Line", COORD{0, 0}, COORD{SHORT(size), 1}, Color::BRIGHT_YELLOW, Color::BLACK);
-        std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("appointmentsButton", COORD{0, 0}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
+    std::shared_ptr<NodeSQ> hSlider(std::shared_ptr<Node2D> container, std::shared_ptr<int> offset, int size, const std::string& colorA, const std::string& colorB, const std::string& colorC, const std::string& colorD){
+        std::shared_ptr<NodeSQ> line = std::make_shared<NodeSQ>("Line", COORD{0, 0}, COORD{SHORT(size), 1}, colorC, colorD);
+        std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("appointmentsButton", COORD{0, 0}, colorA, colorB, std::vector<std::string>{
             "|/////|",});
         
         slider->setProcessFunction([line, slider, container, offset, size](double){
@@ -66,10 +66,10 @@ namespace pui {
         line->addChild(slider);
         return line;
     }
-    std::shared_ptr<NodeSQ> vSlider(std::shared_ptr<Node2D> container, std::shared_ptr<int> offset, int size = 100) {
-        std::shared_ptr<NodeSQ> line = std::make_shared<NodeSQ>("VLine", COORD{0, 0}, COORD{1, SHORT(size)}, Color::BRIGHT_YELLOW, Color::BLACK);
+    std::shared_ptr<NodeSQ> vSlider(std::shared_ptr<Node2D> container, std::shared_ptr<int> offset, int size, const std::string& colorA, const std::string& colorB, const std::string& colorC, const std::string& colorD) {
+        std::shared_ptr<NodeSQ> line = std::make_shared<NodeSQ>("VLine", COORD{0, 0}, COORD{1, SHORT(size)}, colorC, colorD);
 
-        std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("vSliderButton", COORD{0, 0}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
+        std::shared_ptr<NodeButton> slider = std::make_shared<NodeButton>("vSliderButton", COORD{0, 0}, colorA, colorB, std::vector<std::string>{
             "-","|","|","-"
         });
     

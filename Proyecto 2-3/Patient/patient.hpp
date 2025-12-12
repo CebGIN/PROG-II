@@ -79,9 +79,9 @@ namespace ptn{
 
         std::shared_ptr<Node2D> createCard(cfm::IndexedFile<Patient> &list){
             auto root = std::make_shared<Node2D>("pivot", COORD{0, 0});
-            std::shared_ptr<NodeSQ> square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{64, 14}, Color::BRIGHT_YELLOW, Color::BRIGHT_YELLOW);
+            std::shared_ptr<NodeBox> square = std::make_shared<NodeBox>("Cuadro", COORD{0, 0}, COORD{64, 13}, Color::BRIGHT_YELLOW);
             
-            auto label = std::make_shared<NodeUI>("label", COORD{7, 1}, std::vector<std::string>{
+            auto label = std::make_shared<NodePCT>("label", COORD{7, 0}, Color::BLACK, Color::BRIGHT_YELLOW, std::vector<std::string>{
                 "Paciente N:"   + std::to_string(id + 1),
                 "Nombre: "      + getFirstName(),
                 "Apellido: "    + getLastName(),
@@ -96,7 +96,7 @@ namespace ptn{
                 "Notas: "       + getNotes().substr(0, 40) + "..."
             });
         
-            std::shared_ptr<NodeButton> saveChanges = std::make_shared<NodeButton>("saveChanges", COORD{50, 100}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
+            std::shared_ptr<NodeButton> saveChanges = std::make_shared<NodeButton>("saveChanges", COORD{300, 300}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{
                 "[ Guardar ]"});
             saveChanges->setOnClick([this, &list, saveChanges](){
                 this->saveAtIn(id, list);
@@ -108,9 +108,9 @@ namespace ptn{
                 card.lock()->setGlobalPosition(COORD{300, 300});
             });
             
-            std::shared_ptr<NodeButton> deletePatient = std::make_shared<NodeButton>("deletePatient", COORD{58, 1}, Color::RED, Color::BRIGHT_YELLOW, std::vector<std::string>{" X "});
+            std::shared_ptr<NodeButton> deletePatient = std::make_shared<NodeButton>("deletePatient", COORD{60, 1}, Color::RED, Color::BRIGHT_YELLOW, std::vector<std::string>{" X "});
             deletePatient->setOnClick([confirmDelete](){
-                confirmDelete->setGlobalPosition(COORD{25, 8});
+                confirmDelete->setGlobalPosition(COORD{25, 7});
             });
         
             std::function<void()> update_patient_label = [this, label](){
@@ -130,94 +130,94 @@ namespace ptn{
             };
         
             // First Name (row 1)
-            auto editName = std::make_shared<NodeButton>("editName", COORD{-6, 1}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editName = std::make_shared<NodeButton>("editName", COORD{-6, 1}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editName->setOnClick([this, editName, update_patient_label, saveChanges](){
-                setFirstName(Input::getLineInput(editName->getGlobalPosition() + COORD{15, 0}));
+                setFirstName(Input::getLineInput(editName->getGlobalPosition() + COORD{14, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
             
             // Last Name (row 2)
-            auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{-6, 2}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{-6, 2}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editLastname->setOnClick([this, editLastname, update_patient_label, saveChanges](){
-                setLastName(Input::getLineInput(editLastname->getGlobalPosition() + COORD{15, 0}));
+                setLastName(Input::getLineInput(editLastname->getGlobalPosition() + COORD{16, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
             // National ID (row 2)
-            auto editNationalID = std::make_shared<NodeButton>("editNationalID", COORD{-6, 3}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editNationalID = std::make_shared<NodeButton>("editNationalID", COORD{-6, 3}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editNationalID->setOnClick([this, editNationalID, update_patient_label, saveChanges](){
-                setNationalID(Input::getLineInput(editNationalID->getGlobalPosition() + COORD{15, 0}));
+                setNationalID(Input::getLineInput(editNationalID->getGlobalPosition() + COORD{14, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
         
             // Age (row 3)
-            auto editAge = std::make_shared<NodeButton>("editAge", COORD{-6, 4}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editAge = std::make_shared<NodeButton>("editAge", COORD{-6, 4}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editAge->setOnClick([this, editAge, update_patient_label, saveChanges](){
-                std::string input = Input::getLineInput(editAge->getGlobalPosition() + COORD{15, 0});
+                std::string input = Input::getLineInput(editAge->getGlobalPosition() + COORD{12, 0});
                 try {
                     setAge(static_cast<uint8_t>(std::stoi(input)));
                 } catch (...) { /* Handle conversion error silently */ }
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
         
             // Gender (row 4)
-            auto editGender = std::make_shared<NodeButton>("editGender", COORD{-6, 5}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editGender = std::make_shared<NodeButton>("editGender", COORD{-6, 5}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editGender->setOnClick([this, editGender, update_patient_label, saveChanges](){
-                std::string input = Input::getLineInput(editGender->getGlobalPosition() + COORD{15, 0});
+                std::string input = Input::getLineInput(editGender->getGlobalPosition() + COORD{14, 0});
                 if (!input.empty()) setGender(input[0]);
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
         
             // Blood Type (row 5)
-            auto editBlood = std::make_shared<NodeButton>("editBlood", COORD{-6, 6}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editBlood = std::make_shared<NodeButton>("editBlood", COORD{-6, 6}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editBlood->setOnClick([this, editBlood, update_patient_label, saveChanges](){
-                setBloodType(Input::getLineInput(editBlood->getGlobalPosition() + COORD{15, 0}));
+                setBloodType(Input::getLineInput(editBlood->getGlobalPosition() + COORD{19, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
             
             // Phone (row 6)
-            auto editPhone = std::make_shared<NodeButton>("editPhone", COORD{-6, 7}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editPhone = std::make_shared<NodeButton>("editPhone", COORD{-6, 7}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editPhone->setOnClick([this, editPhone, update_patient_label, saveChanges](){
-                setPhone(Input::getLineInput(editPhone->getGlobalPosition() + COORD{15, 0}));
+                setPhone(Input::getLineInput(editPhone->getGlobalPosition() + COORD{16, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
         
             // Address (row 7)
-            auto editAddress = std::make_shared<NodeButton>("editAddress", COORD{-6, 8}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editAddress = std::make_shared<NodeButton>("editAddress", COORD{-6, 8}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editAddress->setOnClick([this, editAddress, update_patient_label, saveChanges](){
-                setAddress(Input::getLineInput(editAddress->getGlobalPosition() + COORD{15, 0}));
+                setAddress(Input::getLineInput(editAddress->getGlobalPosition() + COORD{17, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
         
             // Email (row 8)
-            auto editEmail = std::make_shared<NodeButton>("editEmail", COORD{-6, 9}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editEmail = std::make_shared<NodeButton>("editEmail", COORD{-6, 9}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editEmail->setOnClick([this, editEmail, update_patient_label, saveChanges](){
-                setEmail(Input::getLineInput(editEmail->getGlobalPosition() + COORD{15, 0}));
+                setEmail(Input::getLineInput(editEmail->getGlobalPosition() + COORD{13, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
         
             // Allergies (row 9)
-            auto editAllergies = std::make_shared<NodeButton>("editAllergies", COORD{-6, 10}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editAllergies = std::make_shared<NodeButton>("editAllergies", COORD{-6, 10}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editAllergies->setOnClick([this, editAllergies, update_patient_label, saveChanges](){
-                setAllergies(Input::getLineInput(editAllergies->getGlobalPosition() + COORD{15, 0}));
+                setAllergies(Input::getLineInput(editAllergies->getGlobalPosition() + COORD{16, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
             
             // Notes (row 10)
-            auto editNotes = std::make_shared<NodeButton>("editNotes", COORD{-6, 11}, Color::YELLOW, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editNotes = std::make_shared<NodeButton>("editNotes", COORD{-6, 11}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editNotes->setOnClick([this, editNotes, update_patient_label, saveChanges](){
-                setNotes(Input::getLineInput(editNotes->getGlobalPosition() + COORD{15, 0}));
+                setNotes(Input::getLineInput(editNotes->getGlobalPosition() + COORD{13, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{42, 12});
+                saveChanges->setLocalPosition(COORD{52, 13});
             });
 
         

@@ -28,32 +28,32 @@ namespace hos{
 
         std::shared_ptr<Node2D> headersContainer = std::make_shared<Node2D>("headersContainer", COORD{1, 1});
     
-        std::shared_ptr<NodePCT> hospitalName = std::make_shared<NodePCT>("name", COORD{0,0}, Color::BRIGHT_WHITE, Color::BLACK, std::vector<std::string>{
+        std::shared_ptr<NodePCT> hospitalName = std::make_shared<NodePCT>("name", COORD{0,0}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
             hospital.name,
             hospital.address,
             hospital.phone
         });
     
-        std::shared_ptr<Node2D> buttonsContainer = std::make_shared<Node2D>("buttonContainer", COORD{5, 12});
+        std::shared_ptr<Node2D> buttonsContainer = std::make_shared<Node2D>("buttonContainer", COORD{20, 12});
 
-        std::shared_ptr<NodeButton> pacientsButton = std::make_shared<NodeButton>("pacientsButton", COORD{0, 0}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
-            ".------------------------------------------------------.",
-            "|          Ir al menu de gestion de pacientes          |",
-            "'------------------------------------------------------'"});
+        std::shared_ptr<NodeButton> pacientsButton = std::make_shared<NodeButton>("pacientsButton", COORD{0, 0}, Color::BLACK, Color::YELLOW, std::vector<std::string>{
+            "                                                           ",
+            "            Ir al menu de gestion de pacientes             ",
+            "                                                           "});
         pacientsButton->setOnClick([&hospital](){
             SceneManager::getInstance().changeScene(ptn::createMenu(hospital));
         });
-        std::shared_ptr<NodeButton> doctorsButton = std::make_shared<NodeButton>("doctorsButton", COORD{0, 4}, Color::CYAN, Color::BLACK, std::vector<std::string>{
-            ".------------------------------------------------------.",
-            "|          Ir al menu de gestion de doctores           |",
-            "'------------------------------------------------------'"});
+        std::shared_ptr<NodeButton> doctorsButton = std::make_shared<NodeButton>("doctorsButton", COORD{0, 4}, Color::BLACK, Color::CYAN, std::vector<std::string>{
+            "                                                           ",
+            "            Ir al menu de gestion de doctores              ",
+            "                                                           "});
         doctorsButton->setOnClick([&hospital](){
             SceneManager::getInstance().changeScene(doc::createMenu(hospital));
         });
-        std::shared_ptr<NodeButton> appoinmentButton = std::make_shared<NodeButton>("doctorsButton", COORD{0, 8}, Color::GREEN, Color::BLACK, std::vector<std::string>{
-            ".-------------------------------------------------------.",
-            "|          Ir al menu de gestion de citas               |",
-            "'-------------------------------------------------------'"});
+        std::shared_ptr<NodeButton> appoinmentButton = std::make_shared<NodeButton>("doctorsButton", COORD{0, 8}, Color::BLACK, Color::GREEN, std::vector<std::string>{
+            "                                                           ",
+            "             Ir al menu de gestion de citas                ",
+            "                                                           "});
             appoinmentButton->setOnClick([&hospital](){
             SceneManager::getInstance().changeScene(app::createMenu(hospital, 0, 0));
         });
@@ -74,7 +74,7 @@ namespace ptn{
         std::shared_ptr<Node> root = std::make_shared<Node>("SinglePatientView");
         auto patient = hospital.patients.getAtIDX(i);
 
-        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BLACK, std::vector<std::string>{"[ VOLVER ]"});
+        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BRIGHT_WHITE, std::vector<std::string>{"[ VOLVER ]"});
         backButton->setOnClick([&hospital](){
             SceneManager::getInstance().changeScene(ptn::createMenu(hospital));
         });
@@ -101,7 +101,7 @@ namespace ptn{
             "--- EXPEDIENTE MEDICO DE: " + std::string(patient.getFirstName()) + " " + std::string(patient.getLastName()) + " ---"
         });
         
-        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 3}, Color::RED, Color::BLACK, std::vector<std::string>{"[ VOLVER ]"});
+        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 3}, Color::RED, Color::WHITE, std::vector<std::string>{"[ VOLVER ]"});
         backButton->setOnClick([&hospital](){
             SceneManager::getInstance().changeScene(ptn::createMenu(hospital));
         });
@@ -134,13 +134,13 @@ namespace ptn{
     std::shared_ptr<Node> createMenu(hos::Hospital &hospital) {
         std::shared_ptr<Node> root = std::make_shared<Node>("RootPatients");
 
-        std::shared_ptr<NodeButton> mainMenuButton = std::make_shared<NodeButton>("mainMenuButton", COORD{1, 1}, Color::RED, Color::BLACK, std::vector<std::string>{
-                ".----------------.",
-                "| Menu principal |",
-                "'----------------'"});
+        std::shared_ptr<NodeButton> mainMenuButton = std::make_shared<NodeButton>("mainMenuButton", COORD{1, 1}, Color::BLACK, Color::RED, std::vector<std::string>{
+                "                  ",
+                "  Menu principal  ",
+                "                  "});
         mainMenuButton->setOnClick([&hospital](){SceneManager::getInstance().changeScene(hos::createMenu(hospital));});
 
-        std::shared_ptr<Node2D> cards = std::make_shared<Node2D>("cardCont", COORD{0, 6});
+        std::shared_ptr<Node2D> cards = std::make_shared<Node2D>("cardCont", COORD{0, 7});
         std::shared_ptr<std::vector<std::shared_ptr<ptn::Patient>>> loadedlist = std::make_shared<std::vector<std::shared_ptr<ptn::Patient>>>();
         loadedlist->reserve(hospital.patients.getListSize() * 2);
         
@@ -169,10 +169,10 @@ namespace ptn{
             loadedlist->push_back(patient);
         }
 
-        std::shared_ptr<NodeButton> createPatient = std::make_shared<NodeButton>("createPatient", COORD{21, 1}, Color::YELLOW, Color::BLACK, std::vector<std::string>{
-                ".-------.",
-                "| Nuevo |",
-                "'-------'"});
+        std::shared_ptr<NodeButton> createPatient = std::make_shared<NodeButton>("createPatient", COORD{21, 1}, Color::BLACK, Color::YELLOW, std::vector<std::string>{
+                "         ",
+                "  Nuevo  ",
+                "         "});
             
         createPatient->setOnClick([&hospital, loadedlist, cards](){
             loadedlist->emplace_back(std::make_unique<ptn::Patient>(hospital.patients.getTotalIDXs()));
@@ -191,7 +191,7 @@ namespace ptn{
 
     std::shared_ptr<uint64_t> foundPatientIDX = std::make_shared<uint64_t>(UINT64_MAX);
 
-    std::shared_ptr<NodeButton> viewFoundCard = std::make_shared<NodeButton>("ViewFoundCard", COORD{75, 100}, Color::MAGENTA, Color::BLACK, std::vector<std::string>{"[ Ver Tarjeta ]"});
+    std::shared_ptr<NodeButton> viewFoundCard = std::make_shared<NodeButton>("ViewFoundCard", COORD{75, 100}, Color::MAGENTA, Color::WHITE, std::vector<std::string>{"[ Ver Tarjeta ]"});
 
     viewFoundCard->setOnClick([&hospital, foundPatientIDX](){
         if (*foundPatientIDX != UINT64_MAX) {
@@ -201,9 +201,9 @@ namespace ptn{
 
         std::shared_ptr<NodeUI> searchStatus = std::make_shared<NodeUI>("SearchStatus", COORD{32, 1}, std::vector<std::string>{"Busqueda:"});
         
-        auto searchByID = std::make_shared<NodeButton>("SearchID", COORD{32, 2}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por ID"});
-        auto searchByNatID = std::make_shared<NodeButton>("SearchNatID", COORD{32, 3}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por Cedula"});
-        auto searchByFName = std::make_shared<NodeButton>("SearchFName", COORD{32, 4}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por Nombre"});
+        auto searchByID = std::make_shared<NodeButton>("SearchID", COORD{32, 2}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"Buscar por ID"});
+        auto searchByNatID = std::make_shared<NodeButton>("SearchNatID", COORD{32, 3}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"Buscar por Cedula"});
+        auto searchByFName = std::make_shared<NodeButton>("SearchFName", COORD{32, 4}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"Buscar por Nombre"});
 
         auto performPatientSearch = [loadedlist, searchStatus, foundPatientIDX, viewFoundCard](const std::string& query, const std::string& type) {
             *foundPatientIDX = UINT64_MAX; // Reset previous result
@@ -211,7 +211,7 @@ namespace ptn{
             for (auto patient : *loadedlist){
                 bool match = false;
                 
-                if (type == "ID" && std::to_string(patient->getID()) == query) {
+                if (type == "ID" && std::to_string(patient->getID() + 1) == query) {
                     match = true;
                 } else if (type == "NAT_ID" && std::string(patient->getNationalID()) == query) {
                     match = true;
@@ -221,7 +221,7 @@ namespace ptn{
     
                 if (match) {
                     *foundPatientIDX = patient->getID();
-                    searchStatus->set_text({"Busqueda: EXITO", "Encontrado: " + std::string(patient->getFirstName()) + " " + std::string(patient->getLastName())});
+                    searchStatus->set_text({"Busqueda: Encontrado: " + std::string(patient->getFirstName()) + ", " + std::string(patient->getLastName())});
                     viewFoundCard->setLocalPosition(COORD{80, 1}); // Show the view button
                     return;
                 }
@@ -233,24 +233,24 @@ namespace ptn{
         
         // Button Handlers
         searchByID->setOnClick([searchByID, performPatientSearch](){
-            std::string input = Input::getLineInput(searchByID->getGlobalPosition() + COORD{20, 0});
+            std::string input = Input::getLineInput(searchByID->getGlobalPosition() + COORD{14, 0});
             performPatientSearch(input, "ID");
         });
     
         searchByNatID->setOnClick([searchByNatID, performPatientSearch](){
-            std::string input = Input::getLineInput(searchByNatID->getGlobalPosition() + COORD{20, 0});
+            std::string input = Input::getLineInput(searchByNatID->getGlobalPosition() + COORD{18, 0});
             performPatientSearch(input, "NAT_ID");
         });
     
         searchByFName->setOnClick([searchByFName, performPatientSearch](){
-            std::string input = Input::getLineInput(searchByFName->getGlobalPosition() + COORD{20, 0});
+            std::string input = Input::getLineInput(searchByFName->getGlobalPosition() + COORD{18, 0});
             performPatientSearch(input, "FNAME");
         });
 
         std::shared_ptr<int> dynamicOffset = std::make_shared<int>(cards->getChildCount());
         cards->setProcessFunction([cards, dynamicOffset](double){ *dynamicOffset = (cards->getChildCount() -1)* 66;});
 
-        auto slider = pui::hSlider(cards, dynamicOffset);
+        auto slider = pui::hSlider(cards, dynamicOffset, 100, Color::YELLOW, Color::YELLOW, Color::BRIGHT_YELLOW, Color::BRIGHT_YELLOW);
         slider->setGlobalPosition(COORD{0, 5});
 
         //extender loadedList a toda la vida de la escena
@@ -275,7 +275,7 @@ namespace doc{
         std::shared_ptr<Node> root = std::make_shared<Node>("SingleDoctorView");
         auto doctor = hospital.doctors.getAtIDX(i);
 
-        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BLACK, std::vector<std::string>{"[ VOLVER ]"});
+        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BRIGHT_WHITE, std::vector<std::string>{"[ VOLVER ]"});
         backButton->setOnClick([&hospital](){
             SceneManager::getInstance().changeScene(hos::createMenu(hospital));
         });
@@ -292,13 +292,13 @@ namespace doc{
     std::shared_ptr<Node> createMenu(hos::Hospital &hospital){
         std::shared_ptr<Node> root = std::make_shared<Node>("RootPatients");
 
-        std::shared_ptr<NodeButton> mainMenuButton = std::make_shared<NodeButton>("mainMenuButton", COORD{1, 1}, Color::RED, Color::BLACK, std::vector<std::string>{
-                ".----------------.",
-                "| Menu principal |",
-                "'----------------'"});
+        std::shared_ptr<NodeButton> mainMenuButton = std::make_shared<NodeButton>("mainMenuButton", COORD{1, 1}, Color::BLACK, Color::RED, std::vector<std::string>{
+                "                  ",
+                "  Menu principal  ",
+                "                  "});
         mainMenuButton->setOnClick([&hospital](){SceneManager::getInstance().changeScene(hos::createMenu(hospital));});
 
-        std::shared_ptr<Node2D> cards = std::make_shared<Node2D>("cardCont", COORD{0, 6});
+        std::shared_ptr<Node2D> cards = std::make_shared<Node2D>("cardCont", COORD{0, 7});
         std::shared_ptr<std::vector<std::shared_ptr<doc::Doctor>>> loadedlist = std::make_shared<std::vector<std::shared_ptr<Doctor>>>();
         loadedlist->reserve(hospital.doctors.getListSize() * 2);
         
@@ -320,10 +320,10 @@ namespace doc{
             loadedlist->push_back(doctor);
         }
 
-        std::shared_ptr<NodeButton> createDoctor = std::make_shared<NodeButton>("createDoctor", COORD{21, 1}, Color::CYAN, Color::BLACK, std::vector<std::string>{
-            ".-------.",
-            "| Nuevo |",
-            "'-------'"});
+        std::shared_ptr<NodeButton> createDoctor = std::make_shared<NodeButton>("createDoctor", COORD{21, 1}, Color::BLACK, Color::CYAN, std::vector<std::string>{
+            "         ",
+            "  Nuevo  ",
+            "         "});
         
         createDoctor->setOnClick([&hospital, loadedlist, cards](){
             loadedlist->emplace_back(std::make_unique<doc::Doctor>(hospital.doctors.getTotalIDXs()));
@@ -343,7 +343,7 @@ namespace doc{
         
         std::shared_ptr<uint64_t> foundDoctorIDX = std::make_shared<uint64_t>(UINT64_MAX);
         
-        std::shared_ptr<NodeButton> viewFoundCard = std::make_shared<NodeButton>("ViewFoundCard", COORD{75, 100}, Color::MAGENTA, Color::BLACK, std::vector<std::string>{"[ Ver Tarjeta ]"});
+        std::shared_ptr<NodeButton> viewFoundCard = std::make_shared<NodeButton>("ViewFoundCard", COORD{75, 100}, Color::MAGENTA, Color::WHITE, std::vector<std::string>{"[ Ver Tarjeta ]"});
         
         viewFoundCard->setOnClick([&hospital, foundDoctorIDX](){
             if (*foundDoctorIDX != UINT64_MAX) {
@@ -351,11 +351,11 @@ namespace doc{
             }
         });
 
-        std::shared_ptr<NodeUI> searchStatus = std::make_shared<NodeUI>("SearchStatus", COORD{32, 0}, std::vector<std::string>{"Busqueda:"});
+        std::shared_ptr<NodeUI> searchStatus = std::make_shared<NodeUI>("SearchStatus", COORD{32, 1}, std::vector<std::string>{"Busqueda:"});
         
-        auto searchByID = std::make_shared<NodeButton>("SearchID", COORD{32, 1}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por ID"});
-        auto searchByFName = std::make_shared<NodeButton>("SearchFName", COORD{32, 2}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por Nombre"});
-        auto searchBySpecialty = std::make_shared<NodeButton>("SearchSpecialty", COORD{32, 3}, Color::WHITE, Color::BLACK, std::vector<std::string>{"Buscar por Especialidad"});
+        auto searchByID = std::make_shared<NodeButton>("SearchID", COORD{32, 2}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"Buscar por ID"});
+        auto searchByFName = std::make_shared<NodeButton>("SearchFName", COORD{32, 3}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"Buscar por Nombre"});
+        auto searchBySpecialty = std::make_shared<NodeButton>("SearchSpecialty", COORD{32, 4}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"Buscar por Especialidad"});
         
         auto performDoctorSearch = [loadedlist, searchStatus, foundDoctorIDX, viewFoundCard](const std::string& query, const std::string& type) {
             *foundDoctorIDX = UINT64_MAX; // Reset previous result
@@ -363,7 +363,7 @@ namespace doc{
             for (auto doctor : *loadedlist){
                 bool match = false;
                 
-                if (type == "ID" && std::to_string(doctor->getID()) == query) {
+                if (type == "ID" && std::to_string(doctor->getID()+1) == query) {
                     match = true;
                 } else if (type == "FNAME" && std::string(doctor->getFirstName()).find(query) != std::string::npos) {
                     match = true;
@@ -373,7 +373,7 @@ namespace doc{
         
                 if (match) {
                     *foundDoctorIDX = doctor->getID();
-                    searchStatus->set_text({"Busqueda: EXITO", "Encontrado: " + std::string(doctor->getFirstName()) + ", " + std::string(doctor->getLastName())});
+                    searchStatus->set_text({"Busqueda: Encontrado: " + std::string(doctor->getFirstName()) + ", " + std::string(doctor->getLastName())});
                     viewFoundCard->setLocalPosition(COORD{80, 1}); // Show the view button
                     return;
                 }
@@ -385,17 +385,17 @@ namespace doc{
         
         // Button Handlers
         searchByID->setOnClick([searchByID, performDoctorSearch](){
-            std::string input = Input::getLineInput(searchByID->getGlobalPosition() + COORD{20, 0});
+            std::string input = Input::getLineInput(searchByID->getGlobalPosition() + COORD{14, 0});
             performDoctorSearch(input, "ID");
         });
         
         searchByFName->setOnClick([searchByFName, performDoctorSearch](){
-            std::string input = Input::getLineInput(searchByFName->getGlobalPosition() + COORD{20, 0});
+            std::string input = Input::getLineInput(searchByFName->getGlobalPosition() + COORD{18, 0});
             performDoctorSearch(input, "FNAME");
         });
         
         searchBySpecialty->setOnClick([searchBySpecialty, performDoctorSearch](){
-            std::string input = Input::getLineInput(searchBySpecialty->getGlobalPosition() + COORD{20, 0});
+            std::string input = Input::getLineInput(searchBySpecialty->getGlobalPosition() + COORD{24, 0});
             performDoctorSearch(input, "SPECIALTY");
         });
 
@@ -403,7 +403,7 @@ namespace doc{
         std::shared_ptr<int> dynamicOffset = std::make_shared<int>(cards->getChildCount());
         cards->setProcessFunction([cards, dynamicOffset](double){ *dynamicOffset = (cards->getChildCount() -1)* 66;});
 
-        auto slider = pui::hSlider(cards, dynamicOffset);
+        auto slider = pui::hSlider(cards, dynamicOffset, 100, Color::CYAN, Color::CYAN, Color::BRIGHT_CYAN, Color::BRIGHT_CYAN);
         slider->setGlobalPosition(COORD{0, 5});
 
         //extender loadedList a toda la vida de la escena
@@ -454,7 +454,7 @@ namespace app{
         });
     
         // Diagnosis Input
-        auto diagButton = std::make_shared<NodeButton>("DiagBtn", COORD{1, 5}, Color::WHITE, Color::BLACK, std::vector<std::string>{"[ Diagnosis: (Click to Enter) ]"});
+        auto diagButton = std::make_shared<NodeButton>("DiagBtn", COORD{1, 5}, Color::WHITE, Color::WHITE, std::vector<std::string>{"[ Diagnosis: (Click to Enter) ]"});
         diagButton->setOnClick([diagButton, newRecord](){
             std::string input = Input::getLineInput(diagButton->getGlobalPosition() + COORD{32, 0});
             newRecord->setDiagnosis(input);
@@ -462,7 +462,7 @@ namespace app{
         });
         
         // Treatment Input
-        auto treatButton = std::make_shared<NodeButton>("TreatBtn", COORD{1, 7}, Color::WHITE, Color::BLACK, std::vector<std::string>{"[ Treatment: (Click to Enter) ]"});
+        auto treatButton = std::make_shared<NodeButton>("TreatBtn", COORD{1, 7}, Color::WHITE, Color::WHITE, std::vector<std::string>{"[ Treatment: (Click to Enter) ]"});
         treatButton->setOnClick([treatButton, newRecord](){
             std::string input = Input::getLineInput(treatButton->getGlobalPosition() + COORD{32, 0});
             newRecord->setTreatment(input);
@@ -470,7 +470,7 @@ namespace app{
         });
         
         // Medications Input
-        auto medButton = std::make_shared<NodeButton>("MedBtn", COORD{1, 9}, Color::WHITE, Color::BLACK, std::vector<std::string>{"[ Medications: (Click to Enter) ]"});
+        auto medButton = std::make_shared<NodeButton>("MedBtn", COORD{1, 9}, Color::WHITE, Color::WHITE, std::vector<std::string>{"[ Medications: (Click to Enter) ]"});
         medButton->setOnClick([medButton, newRecord](){
             std::string input = Input::getLineInput(medButton->getGlobalPosition() + COORD{32, 0});
             newRecord->setMedications(input);
@@ -478,7 +478,7 @@ namespace app{
         });
     
         // --- Save and Finalize Button ---
-        std::shared_ptr<NodeButton> saveAndFinalize = std::make_shared<NodeButton>("SaveBtn", COORD{1, 15}, Color::BRIGHT_GREEN, Color::BLACK, std::vector<std::string>{"[ GUARDAR Y FINALIZAR CITA ]"});
+        std::shared_ptr<NodeButton> saveAndFinalize = std::make_shared<NodeButton>("SaveBtn", COORD{1, 15}, Color::BRIGHT_GREEN, Color::WHITE, std::vector<std::string>{"[ GUARDAR Y FINALIZAR CITA ]"});
         saveAndFinalize->setOnClick([&hospital, newRecord, records, appID, patID, docID, contextFlag](){
             // 1. Archive the new MedicalRecord (add to Patient's history list)
             records->add(*newRecord);
@@ -499,7 +499,7 @@ namespace app{
             SceneManager::getInstance().changeScene(createMenu(hospital, contextFlag, contextIDX));
         });
         // --- Cancel Button ---
-    std::shared_ptr<NodeButton> cancel = std::make_shared<NodeButton>("CancelBtn", COORD{35, 15}, Color::RED, Color::BLACK, std::vector<std::string>{"[ CANCELAR ]"});
+    std::shared_ptr<NodeButton> cancel = std::make_shared<NodeButton>("CancelBtn", COORD{35, 15}, Color::RED, Color::WHITE, std::vector<std::string>{"[ CANCELAR ]"});
     cancel->setOnClick([&hospital, root, patID, docID, contextFlag](){
         uint64_t contextIDX;
         if (contextFlag == 1) { // Patient View
@@ -527,13 +527,13 @@ namespace app{
         // 1: Patient-Specific Appointments List
         // 2: Doctor-Specific Appointments  List
         // Determine the return scene based on context
-        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{91, 0}, Color::RED, Color::BLACK, std::vector<std::string>{
-            ".------.",
-            "|Volver|",
-            "'------'"});
+        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{91, 0}, Color::BLACK, Color::RED, std::vector<std::string>{
+            "        ",
+            " Volver ",
+            "        "});
             
         std::shared_ptr<std::vector<std::unique_ptr<app::Appointment>>> loadedList = std::make_shared<std::vector<std::unique_ptr<app::Appointment>>>();
-        std::shared_ptr<Node2D> cards = std::make_shared<Node2D>("Card", COORD{1, 6});
+        std::shared_ptr<Node2D> cards = std::make_shared<Node2D>("Card", COORD{2, 6});
         loadedList->reserve(hospital.appoinments.getListSize() * 1.5);
         // Determine the return scene creation based on context
         if (contextFlag == 1) {
@@ -608,15 +608,16 @@ namespace app{
         }
 
         // --- DOCTOR SELECTOR DIALOG SETUP ---
-        std::shared_ptr<NodeSQ> doctorSelector = std::make_shared<NodeSQ>("selectDoctor", COORD{300, 300}, COORD{26, 40}, Color::CYAN, Color::CYAN);
+        std::shared_ptr<NodeBox> doctorSelector = std::make_shared<NodeBox>("selectDoctor", COORD{300, 300}, COORD{26, 40}, Color::CYAN);
         doctorSelector->addChild(std::make_shared<NodePCT>("Boni", COORD{8,0}, Color::BRIGHT_CYAN, Color::CYAN, std::vector<std::string>{"Doctores"}));
         
+        int c = 0;
         for (unsigned int i = 0; i < hospital.doctors.getTotalIDXs(); i++){
             auto doctor = hospital.doctors.getAtIDX(i);
             if (!doctor) continue;
             uint64_t currID = doctor->getID();
 
-            auto doctortN = std::make_shared<NodeButton>("px", COORD{(SHORT)1, (SHORT)(i + 1)}, Color::BRIGHT_CYAN, Color::CYAN, std::vector<std::string>{doctor->getFirstName()});
+            auto doctortN = std::make_shared<NodeButton>("px", COORD{(SHORT)1, (SHORT)(c + 1)}, Color::BRIGHT_CYAN, Color::CYAN, std::vector<std::string>{doctor->getFirstName()});
             doctortN->setOnClick([cards, doctorSelector, &hospital, i, contextFlag, contextIDX_p, loadedList, currID](){
                 // 1. Create the new Appointment with the selected Doctor and the context Patient
                 loadedList->emplace_back(std::make_unique<Appointment>(hospital.appoinments.getTotalIDXs(), *contextIDX_p, i));
@@ -648,18 +649,19 @@ namespace app{
                 doctorSelector->setLocalPosition({300, 300}); 
             });
             doctorSelector->addChild( doctortN );
+            c++;
         }
         
         // --- PATIENT SELECTOR DIALOG SETUP ---
-        std::shared_ptr<NodeSQ> patientSelector = std::make_shared<NodeSQ>("selectPatient", COORD{300, 300}, COORD{26, 40}, Color::YELLOW, Color::YELLOW);
+        std::shared_ptr<NodeBox> patientSelector = std::make_shared<NodeBox>("selectPatient", COORD{300, 300}, COORD{26, 40}, Color::YELLOW);
         patientSelector->addChild(std::make_shared<NodePCT>("Boni", COORD{8,0}, Color::BRIGHT_YELLOW, Color::YELLOW, std::vector<std::string>{"Pacientes"}));
-        
+        c=0;
         for (unsigned int i = 0; i < hospital.patients.getTotalIDXs(); i++){
             auto patient = hospital.patients.getAtIDX(i);
             if (!patient) continue;
             uint64_t currID = patient->getID();
             
-            auto patientN = std::make_shared<NodeButton>("px", COORD{(SHORT)1, (SHORT)(i + 1)}, Color::BRIGHT_YELLOW, Color::YELLOW, std::vector<std::string>{patient->getFirstName()});
+            auto patientN = std::make_shared<NodeButton>("px", COORD{(SHORT)1, (SHORT)(c + 1)}, Color::BRIGHT_YELLOW, Color::YELLOW, std::vector<std::string>{patient->getFirstName()});
             if (contextFlag == 0){
                 patientN->setOnClick([patientSelector, contextIDX_p, currID, doctorSelector](){
                     *contextIDX_p = currID;
@@ -695,13 +697,14 @@ namespace app{
                 });
             }
             patientSelector->addChild( patientN );   
+            c++;
         }
         
         // --- CREATE APPOINTMENT BUTTON (Nuevo) ---
-        std::shared_ptr<NodeButton> createAppoinment = std::make_shared<NodeButton>("createAppoinment", COORD{91, 3}, Color::GREEN, Color::BLACK, std::vector<std::string>{
-            ".------.",
-            "|Nuevo:|",
-            "'------'"}); 
+        std::shared_ptr<NodeButton> createAppoinment = std::make_shared<NodeButton>("createAppoinment", COORD{91, 3}, Color::BLACK, Color::GREEN, std::vector<std::string>{
+            "        ",
+            " Nuevo: ",
+            "        "}); 
         createAppoinment->setOnClick([patientSelector, doctorSelector, cards, contextFlag](){
             // If we are in the Patient Menu context, we need to select a Doctor
             if (contextFlag == 1) {
@@ -717,7 +720,7 @@ namespace app{
         
         std::shared_ptr<int> dynamicOffset = std::make_shared<int>(cards->getChildCount());
         cards->setProcessFunction([cards, dynamicOffset](double){ *dynamicOffset = (cards->getChildCount() -1)* 12;});
-        auto slider = pui::vSlider(cards, dynamicOffset, 40);
+        auto slider = pui::vSlider(cards, dynamicOffset, 40, Color::GREEN, Color::GREEN, Color::BRIGHT_GREEN, Color::BRIGHT_GREEN);
             
         root->setAtExitFunction([loadedList, contextIDX_p](){loadedList->clear(); *contextIDX_p = 0;});
         

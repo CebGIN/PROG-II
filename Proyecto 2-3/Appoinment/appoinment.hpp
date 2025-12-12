@@ -70,7 +70,7 @@ namespace app{
 
             if(!patient || !doctor) return nullptr;
             
-            auto label = std::make_shared<NodeUI>("label", COORD{7, 1}, std::vector<std::string>{
+            auto label = std::make_shared<NodePCT>("label", COORD{7, 0}, Color::BLACK, Color::BRIGHT_GREEN, std::vector<std::string>{
                 "Cita N:" + std::to_string(getID()),
                 "Paciente: " + (patient ? std::string(patient->getFirstName()) + ", " + std::string(patient->getLastName()) : "N/A"),
                 "Doctor: " + (doctor ? std::string(doctor->getLastName()) : "N/A"),
@@ -91,7 +91,7 @@ namespace app{
             };
         
             // Date (row 3)
-            auto editDate = std::make_shared<NodeButton>("editDate", COORD{-6, 3}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editDate = std::make_shared<NodeButton>("editDate", COORD{-6, 3}, Color::BLUE, Color::WHITE, std::vector<std::string>{"[Edit]"});
             editDate->setOnClick([this, &list, editDate, update_appt_label](){
                 setDate(Input::getLineInput(editDate->getGlobalPosition() + COORD{15, 0}));
                 update_appt_label();
@@ -99,7 +99,7 @@ namespace app{
             });
         
             // Time (row 4)
-            auto editTime = std::make_shared<NodeButton>("editTime", COORD{-6, 4}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editTime = std::make_shared<NodeButton>("editTime", COORD{-6, 4}, Color::BLUE, Color::WHITE, std::vector<std::string>{"[Edit]"});
             editTime->setOnClick([this, &list, editTime, update_appt_label](){
                 setTime(Input::getLineInput(editTime->getGlobalPosition() + COORD{15, 0}));
                 update_appt_label();
@@ -107,7 +107,7 @@ namespace app{
             });
         
             // Reason (row 6)
-            auto editReason = std::make_shared<NodeButton>("editReason", COORD{-6, 6}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editReason = std::make_shared<NodeButton>("editReason", COORD{-6, 6}, Color::BLUE, Color::WHITE, std::vector<std::string>{"[Edit]"});
             editReason->setOnClick([this, &list, editReason, update_appt_label](){
                 setReason(Input::getLineInput(editReason->getGlobalPosition() + COORD{15, 0}));
                 update_appt_label();
@@ -115,7 +115,7 @@ namespace app{
             });
         
             // Notes (row 7)
-            auto editNotes = std::make_shared<NodeButton>("editNotes", COORD{-6, 7}, Color::BLUE, Color::BLACK, std::vector<std::string>{"[Edit]"});
+            auto editNotes = std::make_shared<NodeButton>("editNotes", COORD{-6, 7}, Color::BLUE, Color::WHITE, std::vector<std::string>{"[Edit]"});
             editNotes->setOnClick([this, &list, editNotes, update_appt_label](){
                 setNotes(Input::getLineInput(editNotes->getGlobalPosition() + COORD{15, 0}));
                 update_appt_label();
@@ -131,7 +131,7 @@ namespace app{
             });
         
             // --- Card Structure ---
-            auto square = std::make_shared<NodeSQ>("Cuadro", COORD{0, 0}, COORD{62, 10}, Color::BRIGHT_GREEN, Color::BRIGHT_GREEN);
+            auto square = std::make_shared<NodeBox>("Cuadro", COORD{0, 0}, COORD{62, 10}, Color::BRIGHT_GREEN);
         
             root->addChild(square);
             root->addChild(label);

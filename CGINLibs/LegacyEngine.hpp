@@ -196,7 +196,7 @@ public:
         // emptyCharInfo.Attributes = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; // Blanco por defecto
         CHAR_INFO emptyCharInfo;
         emptyCharInfo.Char.UnicodeChar = L' '; // espacio en wchar_t
-        emptyCharInfo.Attributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE; 
+        emptyCharInfo.Attributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_INTENSITY; 
 
         for (size_t i = 0; i < screenBuffer.size(); ++i) {
             screenBuffer[i] = emptyCharInfo;
@@ -460,7 +460,7 @@ public:
 
     NodeUI(const std::string& nodeName, COORD nodePosition, std::vector<std::string> nodeText) :
         Node2D(nodeName, nodePosition), text(nodeText)
-    {
+{
         if (!text.empty()) {
             size.X = static_cast<SHORT>(text[0].size());
             size.Y = static_cast<SHORT>(text.size());
@@ -498,7 +498,7 @@ public:
 
     void draw(ConsoleRenderer& renderer) override {
         COORD globalPos = getGlobalPosition();
-        WORD defaultAttributes = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; // White
+        WORD defaultAttributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE; 
 
         for (SHORT y_offset = 0; y_offset < static_cast<SHORT>(text.size()); ++y_offset) {
             COORD currentLineGlobalPos = (globalPos + COORD{0, y_offset});
@@ -558,6 +558,40 @@ public:
         Node::draw(renderer); // Propagate to children
     }
 };
+
+class NodeBox : public Node2D{
+    protected:
+        COORD size;
+        WORD background_attributes;
+    public:
+        NodeBox(const std::string& nodeName, COORD nodePosition, COORD nodeSize, const std::string& backgroundColorName) : Node2D(nodeName, nodePosition), 
+            size(nodeSize), background_attributes(Color::getBackgroundColorAttribute(backgroundColorName)) {}
+        
+        COORD getSize() const{
+            return size;
+        }
+    
+        void setSize(COORD newSize = {1, 1}) {
+            size = newSize;
+        }
+    
+    
+        void changeBackgroundColor(const std::string& backgroundColorName){
+            background_attributes = Color::getBackgroundColorAttribute(backgroundColorName);
+        }
+    
+        void draw(ConsoleRenderer& renderer) override {
+            COORD globalPos = getGlobalPosition();
+    
+            for (SHORT j = 0; j < static_cast<SHORT>(size.Y); ++j){
+                for(SHORT i = 0; i < size.X; ++i){
+                    renderer.putChar(globalPos + COORD{i, j}, L' ', background_attributes);
+                }
+            }
+    
+            Node::draw(renderer); // Propagate to children
+        }
+    };
 
 class NodePCT : public NodeUI{
 protected:
@@ -755,9 +789,8 @@ class SceneManager {
     - Crear funciones que se encargan de construir las escenas
     - Las funciones de la forma: std::sharet_ptr crearEscena(){... return root;};
     En el main():
-    - Obtener la referencia al SceneManager con manager = SceneManager::getInstance();
     - Crear la root como root = crearEscena();
-    - Establecer la root como la escena activa con manager.changeScene(root);
-    - Iniciar el bucle de ejecución con manager.startRunning();
+    - Establecer la root como la escena activa con SceneManager::getInstance().changeScene(root);
+    - Iniciar el bucle de ejecución con SceneManager::getInstance().startRunning();
     Al iniciar el bucle la ejecución del main se mantendra en ese punto, cualquier lógica adicional debe ser manejada por el contenido de la escena.
 */

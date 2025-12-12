@@ -8,7 +8,7 @@
 #include <cstring>
 #include <vector>
 
-int main(){  
+int main(){
     hos::Hospital hospital("Hospital");
     hospital.setName("EL HOSPITAL ADIOS MUNDO");
     hospital.setAddres("Av Code con calle embarcadero");
