@@ -446,7 +446,7 @@ namespace app{
         // Set the cost from the Doctor's consultationFee
         newRecord->setCost(doctorPTR->getConsultationFee());
     
-        std::shared_ptr<NodeUI> header = std::make_shared<NodeUI>("Header", COORD{1, 1}, std::vector<std::string>{
+        std::shared_ptr<NodePCT> header = std::make_shared<NodePCT>("Header", COORD{1, 1}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
             "--- CREAR EXPEDIENTE MEDICO ---",
             "Paciente: " + std::string(patientPTR->getFirstName()) + " " + std::string(patientPTR->getLastName()),
             "Doctor: " + (doctorPTR ? std::string(doctorPTR->getLastName()) : "N/A"),
@@ -454,7 +454,7 @@ namespace app{
         });
     
         // Diagnosis Input
-        auto diagButton = std::make_shared<NodeButton>("DiagBtn", COORD{1, 5}, Color::WHITE, Color::WHITE, std::vector<std::string>{"[ Diagnosis: (Click to Enter) ]"});
+        auto diagButton = std::make_shared<NodeButton>("DiagBtn", COORD{1, 5}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"[ Diagnosis: (Click to Enter) ]"});
         diagButton->setOnClick([diagButton, newRecord](){
             std::string input = Input::getLineInput(diagButton->getGlobalPosition() + COORD{32, 0});
             newRecord->setDiagnosis(input);
@@ -462,7 +462,7 @@ namespace app{
         });
         
         // Treatment Input
-        auto treatButton = std::make_shared<NodeButton>("TreatBtn", COORD{1, 7}, Color::WHITE, Color::WHITE, std::vector<std::string>{"[ Treatment: (Click to Enter) ]"});
+        auto treatButton = std::make_shared<NodeButton>("TreatBtn", COORD{1, 7}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"[ Treatment: (Click to Enter) ]"});
         treatButton->setOnClick([treatButton, newRecord](){
             std::string input = Input::getLineInput(treatButton->getGlobalPosition() + COORD{32, 0});
             newRecord->setTreatment(input);
@@ -470,7 +470,7 @@ namespace app{
         });
         
         // Medications Input
-        auto medButton = std::make_shared<NodeButton>("MedBtn", COORD{1, 9}, Color::WHITE, Color::WHITE, std::vector<std::string>{"[ Medications: (Click to Enter) ]"});
+        auto medButton = std::make_shared<NodeButton>("MedBtn", COORD{1, 9}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{"[ Medications: (Click to Enter) ]"});
         medButton->setOnClick([medButton, newRecord](){
             std::string input = Input::getLineInput(medButton->getGlobalPosition() + COORD{32, 0});
             newRecord->setMedications(input);
@@ -478,7 +478,7 @@ namespace app{
         });
     
         // --- Save and Finalize Button ---
-        std::shared_ptr<NodeButton> saveAndFinalize = std::make_shared<NodeButton>("SaveBtn", COORD{1, 15}, Color::BRIGHT_GREEN, Color::WHITE, std::vector<std::string>{"[ GUARDAR Y FINALIZAR CITA ]"});
+        std::shared_ptr<NodeButton> saveAndFinalize = std::make_shared<NodeButton>("SaveBtn", COORD{1, 15}, Color::BRIGHT_GREEN, Color::BRIGHT_WHITE, std::vector<std::string>{"[ GUARDAR Y FINALIZAR CITA ]"});
         saveAndFinalize->setOnClick([&hospital, newRecord, records, appID, patID, docID, contextFlag](){
             // 1. Archive the new MedicalRecord (add to Patient's history list)
             records->add(*newRecord);
@@ -499,8 +499,8 @@ namespace app{
             SceneManager::getInstance().changeScene(createMenu(hospital, contextFlag, contextIDX));
         });
         // --- Cancel Button ---
-    std::shared_ptr<NodeButton> cancel = std::make_shared<NodeButton>("CancelBtn", COORD{35, 15}, Color::RED, Color::WHITE, std::vector<std::string>{"[ CANCELAR ]"});
-    cancel->setOnClick([&hospital, root, patID, docID, contextFlag](){
+        std::shared_ptr<NodeButton> cancel = std::make_shared<NodeButton>("CancelBtn", COORD{35, 15}, Color::RED, Color::BRIGHT_WHITE, std::vector<std::string>{"[ CANCELAR ]"});
+        cancel->setOnClick([&hospital, root, patID, docID, contextFlag](){
         uint64_t contextIDX;
         if (contextFlag == 1) { // Patient View
             contextIDX = patID;

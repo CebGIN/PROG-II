@@ -142,14 +142,14 @@ namespace ptn{
             editLastname->setOnClick([this, editLastname, update_patient_label, saveChanges](){
                 setLastName(Input::getLineInput(editLastname->getGlobalPosition() + COORD{16, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
             // National ID (row 2)
             auto editNationalID = std::make_shared<NodeButton>("editNationalID", COORD{-6, 3}, Color::YELLOW, Color::BRIGHT_YELLOW, std::vector<std::string>{"[Edit]"});
             editNationalID->setOnClick([this, editNationalID, update_patient_label, saveChanges](){
                 setNationalID(Input::getLineInput(editNationalID->getGlobalPosition() + COORD{14, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
         
             // Age (row 3)
@@ -160,7 +160,7 @@ namespace ptn{
                     setAge(static_cast<uint8_t>(std::stoi(input)));
                 } catch (...) { /* Handle conversion error silently */ }
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
         
             // Gender (row 4)
@@ -169,7 +169,7 @@ namespace ptn{
                 std::string input = Input::getLineInput(editGender->getGlobalPosition() + COORD{14, 0});
                 if (!input.empty()) setGender(input[0]);
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
         
             // Blood Type (row 5)
@@ -177,7 +177,7 @@ namespace ptn{
             editBlood->setOnClick([this, editBlood, update_patient_label, saveChanges](){
                 setBloodType(Input::getLineInput(editBlood->getGlobalPosition() + COORD{19, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
             
             // Phone (row 6)
@@ -185,7 +185,7 @@ namespace ptn{
             editPhone->setOnClick([this, editPhone, update_patient_label, saveChanges](){
                 setPhone(Input::getLineInput(editPhone->getGlobalPosition() + COORD{16, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
         
             // Address (row 7)
@@ -193,7 +193,7 @@ namespace ptn{
             editAddress->setOnClick([this, editAddress, update_patient_label, saveChanges](){
                 setAddress(Input::getLineInput(editAddress->getGlobalPosition() + COORD{17, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
         
             // Email (row 8)
@@ -201,7 +201,7 @@ namespace ptn{
             editEmail->setOnClick([this, editEmail, update_patient_label, saveChanges](){
                 setEmail(Input::getLineInput(editEmail->getGlobalPosition() + COORD{13, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
         
             // Allergies (row 9)
@@ -209,7 +209,7 @@ namespace ptn{
             editAllergies->setOnClick([this, editAllergies, update_patient_label, saveChanges](){
                 setAllergies(Input::getLineInput(editAllergies->getGlobalPosition() + COORD{16, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
             
             // Notes (row 10)
@@ -217,7 +217,7 @@ namespace ptn{
             editNotes->setOnClick([this, editNotes, update_patient_label, saveChanges](){
                 setNotes(Input::getLineInput(editNotes->getGlobalPosition() + COORD{13, 0}));
                 update_patient_label();
-                saveChanges->setLocalPosition(COORD{52, 13});
+                saveChanges->setLocalPosition(COORD{53, 12});
             });
 
         

@@ -124,72 +124,72 @@ namespace doc{
             // First Name (row 1)
             auto editName = std::make_shared<NodeButton>("editName", COORD{-6, 1}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editName->setOnClick([this, editName, update_doctor_label, saveChanges](){
-                setFirstName(Input::getLineInput(editName->getGlobalPosition() + COORD{15, 0}));
+                setFirstName(Input::getLineInput(editName->getGlobalPosition() + COORD{14, 0}));
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
             // Last Name (row 2)
             auto editLastname = std::make_shared<NodeButton>("editLastname", COORD{-6, 2}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editLastname->setOnClick([this, editLastname, update_doctor_label, saveChanges](){
-                setLastName(Input::getLineInput(editLastname->getGlobalPosition() + COORD{15, 0}));
+                setLastName(Input::getLineInput(editLastname->getGlobalPosition() + COORD{16, 0}));
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
             // Last Name (row 3)
             auto editNationalId = std::make_shared<NodeButton>("editNationalId", COORD{-6, 3}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editNationalId->setOnClick([this, editNationalId, update_doctor_label, saveChanges](){
-                setNationalID(Input::getLineInput(editNationalId->getGlobalPosition() + COORD{15, 0}));
+                setNationalID(Input::getLineInput(editNationalId->getGlobalPosition() + COORD{14, 0}));
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
             // Specialty (row 4)
             auto editSpecialty = std::make_shared<NodeButton>("editSpecialty", COORD{-6, 4}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editSpecialty->setOnClick([this, editSpecialty, update_doctor_label, saveChanges](){
-                setSpecialty(Input::getLineInput(editSpecialty->getGlobalPosition() + COORD{15, 0}));
+                setSpecialty(Input::getLineInput(editSpecialty->getGlobalPosition() + COORD{20, 0}));
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
             // Years Experience (row 5)
             auto editExp = std::make_shared<NodeButton>("editExp", COORD{-6, 5}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editExp->setOnClick([this, editExp, update_doctor_label, saveChanges](){
-                std::string input = Input::getLineInput(editExp->getGlobalPosition() + COORD{15, 0});
+                std::string input = Input::getLineInput(editExp->getGlobalPosition() + COORD{22, 0});
                 try {
                     setYearsExperience(std::stoi(input));
                 } catch (...) { /* Handle conversion error silently */ }
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
             // Consultation Fee (row 6)
             auto editFee = std::make_shared<NodeButton>("editFee", COORD{-6, 6}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editFee->setOnClick([this, editFee, update_doctor_label, saveChanges](){
-                std::string input = Input::getLineInput(editFee->getGlobalPosition() + COORD{15, 0});
+                std::string input = Input::getLineInput(editFee->getGlobalPosition() + COORD{14, 0});
                 try {
                     setConsultationFee(std::stof(input));
                 } catch (...) { /* Handle conversion error silently */ }
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
             // Working Hours (row 7)
             auto editHours = std::make_shared<NodeButton>("editHours", COORD{-6, 7}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editHours->setOnClick([this, editHours, update_doctor_label, saveChanges](){
                 setWorkingHours(Input::getLineInput(editHours->getGlobalPosition() + COORD{15, 0}));
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
             // Phone (row 8)
             auto editPhone = std::make_shared<NodeButton>("editPhone", COORD{-6, 8}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editPhone->setOnClick([this, editPhone, update_doctor_label, saveChanges](){
-                setPhone(Input::getLineInput(editPhone->getGlobalPosition() + COORD{15, 0}));
+                setPhone(Input::getLineInput(editPhone->getGlobalPosition() + COORD{16, 0}));
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
         
             // Email (row 9)
             auto editEmail = std::make_shared<NodeButton>("editEmail", COORD{-6, 9}, Color::BLUE, Color::BRIGHT_CYAN, std::vector<std::string>{"[Edit]"});
             editEmail->setOnClick([this, editEmail, update_doctor_label, saveChanges](){
-                setEmail(Input::getLineInput(editEmail->getGlobalPosition() + COORD{15, 0}));
+                setEmail(Input::getLineInput(editEmail->getGlobalPosition() + COORD{13, 0}));
                 update_doctor_label();
-                saveChanges->setLocalPosition(COORD{43, 10});
+                saveChanges->setLocalPosition(COORD{50, 10});
             });
         
             root->addChild(square);
