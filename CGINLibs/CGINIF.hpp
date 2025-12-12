@@ -229,6 +229,10 @@ namespace cfm {
         }
         
         uint64_t getNextIDX() const {return nextIDX;}
+
+        uint64_t getFileSize() const {
+            return HEADERSIZE + nextIDX * sizeof(uint64_t);
+        }
     };
 
     template <typename T> class IndexedFile {
@@ -296,6 +300,10 @@ namespace cfm {
             delete[] dataBlob;
             return object_ptr;
         }
+        
+        uint64_t getDataFileSize() {return data.getEndOfFile();}
+        uint64_t getIndexFileSize() const {return index.getFileSize();}
+        uint64_t getSpacesFileSize() {return (index.getSpaces().getSize() + 1) * sizeof(uint64_t);}
     };
 
 }

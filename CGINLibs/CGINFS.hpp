@@ -52,6 +52,8 @@ namespace cfm {
             }
         }
 
+        uint64_t getSize() const {return size;}
+
         bool isStackEmpty(){return size == 0;}
 
         void push(const T &value){

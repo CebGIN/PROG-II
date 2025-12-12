@@ -23,6 +23,46 @@ namespace app{
 }
 
 namespace hos{
+    std::shared_ptr<Node> createMenu(Hospital &hospital);
+
+    std::shared_ptr<Node> createFilesVisor(Hospital &hospital){
+        std::shared_ptr<Node> root = std::make_shared<Node>("Root");
+        std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::BLACK, Color::RED, std::vector<std::string>{
+            "        ",
+            " Volver ",
+            "        "});
+        backButton->setOnClick([&hospital](){SceneManager::getInstance().changeScene(hos::createMenu(hospital));});
+        
+        std::shared_ptr<NodePCT> Patients = std::make_shared<NodePCT>("Patients", COORD{1, 5}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
+            "--- Archivos de los pacientes ---",
+            "Ruta: " + hospital.folderName + "/Patients",
+            "Bytes del archivo de data (data.bin): " + std::to_string(hospital.patients.getDataFileSize()) + "b",
+            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.patients.getIndexFileSize())+ "b",
+            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.patients.getSpacesFileSize())+ "b",
+        });
+        std::shared_ptr<NodePCT> Doctors = std::make_shared<NodePCT>("Doctors", COORD{1, 12}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
+            "--- Archivos de los doctores ---",
+            "Ruta: " + hospital.folderName + "/Doctors",
+            "Bytes del archivo de data (data.bin): " + std::to_string(hospital.doctors.getDataFileSize()) + "b",
+            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.doctors.getIndexFileSize())+ "b",
+            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.doctors.getSpacesFileSize()) + "b",
+        });
+        std::shared_ptr<NodePCT> Appoiments = std::make_shared<NodePCT>("Appoiments", COORD{1, 19}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
+            "--- Archivos de las citas ---",
+            "Ruta: " + hospital.folderName + "/Appoiments",
+            "Bytes del archivo de data (data.bin): " + std::to_string(hospital.appoinments.getDataFileSize()) + "b",
+            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.appoinments.getIndexFileSize())+ "b",
+            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.appoinments.getSpacesFileSize()) + "b",
+        });
+
+        root->addChild(backButton);
+        root->addChild(Patients);
+        root->addChild(Doctors);
+        root->addChild(Appoiments);
+
+        return root;
+    }
+
     std::shared_ptr<Node> createMenu(Hospital &hospital){
         std::shared_ptr<Node> root = std::make_shared<Node>("Root");
 
@@ -57,6 +97,11 @@ namespace hos{
             appoinmentButton->setOnClick([&hospital](){
             SceneManager::getInstance().changeScene(app::createMenu(hospital, 0, 0));
         });
+        std::shared_ptr<NodeButton> manageFiles = std::make_shared<NodeButton>("doctorsButton", COORD{0, 39}, Color::BLACK, Color::WHITE, std::vector<std::string>{
+            "                 Revision de los archivos                  "});
+            manageFiles->setOnClick([&hospital](){
+            SceneManager::getInstance().changeScene(createFilesVisor(hospital));
+        });
 
         root->addChild(headersContainer);
             headersContainer->addChild(hospitalName);
@@ -64,6 +109,7 @@ namespace hos{
             buttonsContainer->addChild(pacientsButton);
             buttonsContainer->addChild(doctorsButton);
             buttonsContainer->addChild(appoinmentButton);
+        root->addChild(manageFiles);
         return root;
     }
 }
