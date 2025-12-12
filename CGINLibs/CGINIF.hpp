@@ -270,7 +270,7 @@ namespace cfm {
             data.addModify(reinterpret_cast<const char*>(&object), pos);
         }
 
-        int64_t getListSize(){
+        uint64_t getListSize(){
             return index.getAmountOfEntries();
         }
 
@@ -305,7 +305,6 @@ namespace cfm {
         uint64_t getIndexFileSize() const {return index.getFileSize();}
         uint64_t getSpacesFileSize() {return (index.getSpaces().getSize() + 1) * sizeof(uint64_t);}
     };
-
 }
 
 #endif

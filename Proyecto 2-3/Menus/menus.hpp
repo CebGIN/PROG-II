@@ -36,23 +36,29 @@ namespace hos{
         std::shared_ptr<NodePCT> Patients = std::make_shared<NodePCT>("Patients", COORD{1, 5}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
             "--- Archivos de los pacientes ---",
             "Ruta: " + hospital.folderName + "/Patients",
+            "Entradas activas: " + std::to_string(hospital.patients.getListSize()) + " Siguiente ID: " + std::to_string(hospital.patients.getTotalIDXs() + 1),
+            "Peso de un paciente: " + std::to_string(sizeof(ptn::Patient)) + "b",
             "Bytes del archivo de data (data.bin): " + std::to_string(hospital.patients.getDataFileSize()) + "b",
-            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.patients.getIndexFileSize())+ "b",
-            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.patients.getSpacesFileSize())+ "b",
+            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.patients.getIndexFileSize())+ "b (Incluidos 16b de Header)",
+            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.patients.getSpacesFileSize())+ "b (Incluidos 8b de Header)",
         });
-        std::shared_ptr<NodePCT> Doctors = std::make_shared<NodePCT>("Doctors", COORD{1, 12}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
+        std::shared_ptr<NodePCT> Doctors = std::make_shared<NodePCT>("Doctors", COORD{1, 15}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
             "--- Archivos de los doctores ---",
             "Ruta: " + hospital.folderName + "/Doctors",
+            "Entradas activas: " + std::to_string(hospital.doctors.getListSize()) + " Siguiente ID: " + std::to_string(hospital.doctors.getTotalIDXs() + 1),
+            "Peso de un doctor: " + std::to_string(sizeof(doc::Doctor)) + "b",
             "Bytes del archivo de data (data.bin): " + std::to_string(hospital.doctors.getDataFileSize()) + "b",
-            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.doctors.getIndexFileSize())+ "b",
-            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.doctors.getSpacesFileSize()) + "b",
+            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.doctors.getIndexFileSize())+ "b (Incluidos 16b de Header)",
+            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.doctors.getSpacesFileSize()) + "b (Incluidos 8b de Header)",
         });
-        std::shared_ptr<NodePCT> Appoiments = std::make_shared<NodePCT>("Appoiments", COORD{1, 19}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
+        std::shared_ptr<NodePCT> Appoiments = std::make_shared<NodePCT>("Appoiments", COORD{1, 25}, Color::BLACK, Color::BRIGHT_WHITE, std::vector<std::string>{
             "--- Archivos de las citas ---",
             "Ruta: " + hospital.folderName + "/Appoiments",
+            "Entradas activas: " + std::to_string(hospital.appoinments.getListSize()) + " Siguiente ID: " + std::to_string(hospital.appoinments.getTotalIDXs() + 1),
+            "Peso de una cita: " + std::to_string(sizeof(app::Appointment)) + "b",
             "Bytes del archivo de data (data.bin): " + std::to_string(hospital.appoinments.getDataFileSize()) + "b",
-            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.appoinments.getIndexFileSize())+ "b",
-            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.appoinments.getSpacesFileSize()) + "b",
+            "Bytes del archivo de indice (index.idx): " + std::to_string(hospital.appoinments.getIndexFileSize())+ "b (Incluidos 16b de Header)",
+            "Bytes del archivo de pila de espacios (spaces.bin): " + std::to_string(hospital.appoinments.getSpacesFileSize()) + "b (Incluidos 8b de Header)",
         });
 
         root->addChild(backButton);
@@ -118,7 +124,7 @@ namespace ptn{
     //No se porque funciona :(, en teoria deberia crashear ya que patient no se almacena, por lo que se destruye al terminar la funcion, pero sin embargo no da error al manipular la tarjeta
     std::shared_ptr<Node> createSinglePatientCardView(hos::Hospital &hospital,  uint64_t i){
         std::shared_ptr<Node> root = std::make_shared<Node>("SinglePatientView");
-        auto patient = hospital.patients.getAtIDX(i);
+        std::shared_ptr<ptn::Patient> patient = hospital.patients.getAtIDX(i);
 
         std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BRIGHT_WHITE, std::vector<std::string>{"[ VOLVER ]"});
         backButton->setOnClick([&hospital](){
@@ -128,13 +134,15 @@ namespace ptn{
         std::shared_ptr<Node2D> patientCard = patient->createCard(hospital.patients);
         patientCard->setLocalPosition(COORD{3, 3});
 
+        root->setAtExitFunction([patient](){patient->getID();});
+
         root->addChild(backButton);
         root->addChild(patientCard);
         
         return root;
     }
 
-    std::unique_ptr<cfm::IndexedFile<app::MedicalRecord>>  getMedicalRecord(std::string folder, uint64_t ptnID){
+    std::unique_ptr<cfm::IndexedFile<app::MedicalRecord>> getMedicalRecord(std::string folder, uint64_t ptnID){
         cfm::Folder Fold(folder + "/Patients/" + std::to_string(ptnID));
         std::unique_ptr<cfm::IndexedFile<app::MedicalRecord>> record = std::make_unique<cfm::IndexedFile<app::MedicalRecord>>(folder + "/Patients/" + std::to_string(ptnID));
         return record;
@@ -143,31 +151,32 @@ namespace ptn{
     std::shared_ptr<Node> createMedicalRecordViewer(hos::Hospital &hospital, const Patient &patient){
         std::shared_ptr<Node> root = std::make_shared<Node>("RootRecordsViewer");
         
-        std::shared_ptr<NodeUI> header = std::make_shared<NodeUI>("Header", COORD{1, 1}, std::vector<std::string>{
-            "--- EXPEDIENTE MEDICO DE: " + std::string(patient.getFirstName()) + " " + std::string(patient.getLastName()) + " ---"
-        });
         
         std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 3}, Color::RED, Color::WHITE, std::vector<std::string>{"[ VOLVER ]"});
         backButton->setOnClick([&hospital](){
             SceneManager::getInstance().changeScene(ptn::createMenu(hospital));
         });
         
+
+        std::shared_ptr<NodeUI> header = std::make_shared<NodeUI>("Header", COORD{1, 1}, std::vector<std::string>{
+            "--- EXPEDIENTE MEDICO DE: " + std::string(patient.getFirstName()) + " " + std::string(patient.getLastName()) + " ---"
+        });
         std::shared_ptr<Node2D> recordCont = std::make_shared<Node2D>("RecordCont", COORD{1, 5});
-        
-        // Display all records
         auto list = getMedicalRecord(hospital.folderName, patient.getID());
+        int c = 0;
         for (unsigned int i = 0; i < list->getTotalIDXs(); i++){
             auto record = list->getAtIDX(i);
             if (!record) continue;
-            auto recordCard = std::make_shared<NodeUI>("RecCard" + std::to_string(i), COORD{0, SHORT(i * 7)}, std::vector<std::string>{
+            auto recordCard = std::make_shared<NodeUI>("RecCard" + std::to_string(i), COORD{0, SHORT(c * 7)}, std::vector<std::string>{
                 "ID: " + std::to_string(record->getId()) + " | Doctor ID: " + std::to_string(record->getDoctorId()),
                 "------------------------------------------------",
-                "Diagnosis: " + record->getDiagnosis().substr(0, 50) + "...",
-                "Treatment: " + record->getTreatment().substr(0, 50) + "...",
-                "Medications: " + record->getMedications().substr(0, 50) + "...",
+                "Diagnostico: " + record->getDiagnosis().substr(0, 50) + "...",
+                "Tratamiento: " + record->getTreatment().substr(0, 50) + "...",
+                "Medicamentos: " + record->getMedications().substr(0, 50) + "...",
                 "------------------------------------------------"
             });
             recordCont->addChild(recordCard);
+            c++;
         }
         
         root->addChild(header);
@@ -319,7 +328,7 @@ namespace ptn{
 namespace doc{
     std::shared_ptr<Node> createSingleDoctorCardView(hos::Hospital &hospital,  uint64_t i){
         std::shared_ptr<Node> root = std::make_shared<Node>("SingleDoctorView");
-        auto doctor = hospital.doctors.getAtIDX(i);
+        std::shared_ptr<doc::Doctor> doctor = hospital.doctors.getAtIDX(i);
 
         std::shared_ptr<NodeButton> backButton = std::make_shared<NodeButton>("backButton", COORD{0, 0}, Color::RED, Color::BRIGHT_WHITE, std::vector<std::string>{"[ VOLVER ]"});
         backButton->setOnClick([&hospital](){
@@ -329,6 +338,8 @@ namespace doc{
         std::shared_ptr<Node2D> doctorCard = doctor->createCard(hospital.doctors);
         doctorCard->setLocalPosition(COORD{3, 3});
         
+        root->setAtExitFunction([doctor](){doctor->getID();});
+
         root->addChild(backButton);
         root->addChild(doctorCard);
         
@@ -547,14 +558,16 @@ namespace app{
         // --- Cancel Button ---
         std::shared_ptr<NodeButton> cancel = std::make_shared<NodeButton>("CancelBtn", COORD{35, 15}, Color::RED, Color::BRIGHT_WHITE, std::vector<std::string>{"[ CANCELAR ]"});
         cancel->setOnClick([&hospital, root, patID, docID, contextFlag](){
-        uint64_t contextIDX;
-        if (contextFlag == 1) { // Patient View
-            contextIDX = patID;
-        } else if (contextFlag == 2) { // Doctor View
-            contextIDX = docID;
-        }
-        SceneManager::getInstance().changeScene(createMenu(hospital, contextFlag, contextIDX));
+            uint64_t contextIDX;
+            if (contextFlag == 1) { // Patient View
+                contextIDX = patID;
+            } else if (contextFlag == 2) { // Doctor View
+                contextIDX = docID;
+            }
+            SceneManager::getInstance().changeScene(createMenu(hospital, contextFlag, contextIDX));
         });
+        // cancel->setOnClick([&hospital](){SceneManager::getInstance().changeScene(createMenu(hospital, 0, 0));
+        // });
         
         root->addChild(header);
         root->addChild(diagButton);
@@ -593,7 +606,7 @@ namespace app{
                 auto idx = idxs->getPosOfIDX(i);
                 auto appoinment = hospital.appoinments.getAtIDX(idx);
                 if (!appoinment) continue;
-                auto card = appoinment->createCard(hospital.appoinments, hospital.patients, hospital.doctors, contextFlag);
+                auto card = appoinment->createCard(hospital.appoinments, hospital.patients, hospital.doctors);
                 if(!card) {appoinment->erasefrom(hospital.appoinments); continue;}
                 cards->addChild(card);
                 std::shared_ptr<NodeButton> finalizeAppointment = std::make_shared<NodeButton>("finalizeAppointment", COORD{43,8}, Color::BRIGHT_WHITE, Color::BRIGHT_GREEN, std::vector<std::string>{
@@ -617,7 +630,7 @@ namespace app{
                 auto appoinment = hospital.appoinments.getAtIDX(idx);
                 if (!appoinment) continue;
 
-                auto card = appoinment->createCard(hospital.appoinments, hospital.patients, hospital.doctors, contextFlag);
+                auto card = appoinment->createCard(hospital.appoinments, hospital.patients, hospital.doctors);
                 if(!card) {appoinment->erasefrom(hospital.appoinments); continue;}
 
                 cards->addChild(card);
@@ -639,7 +652,7 @@ namespace app{
                 auto appoinment = hospital.appoinments.getAtIDX(i);
                 if (!appoinment) continue;
 
-                auto card = appoinment->createCard(hospital.appoinments, hospital.patients, hospital.doctors, contextFlag);
+                auto card = appoinment->createCard(hospital.appoinments, hospital.patients, hospital.doctors);
                 if(!card) {appoinment->erasefrom(hospital.appoinments); continue;}
                 cards->addChild(card);
                 std::shared_ptr<NodeButton> finalizeAppointment = std::make_shared<NodeButton>("finalizeAppointment", COORD{43,8}, Color::BRIGHT_WHITE, Color::BRIGHT_GREEN, std::vector<std::string>{
@@ -680,7 +693,7 @@ namespace app{
                 dApps->addToIndex();
 
                 // // 3. Create and add the UI card
-                auto card  = loadedList->back()->createCard(hospital.appoinments, hospital.patients, hospital.doctors, contextFlag);
+                auto card  = loadedList->back()->createCard(hospital.appoinments, hospital.patients, hospital.doctors);
                 cards->addChild(card);
                 card->setLocalPosition(COORD{ 0, static_cast<SHORT>((loadedList->size()-1) * 12)});
                 std::shared_ptr<NodeButton> finalizeAppointment = std::make_shared<NodeButton>("finalizeAppointment", COORD{43,8}, Color::BRIGHT_WHITE, Color::BRIGHT_GREEN, std::vector<std::string>{
@@ -730,7 +743,7 @@ namespace app{
                     dApps->getSpaces().push(loadedList->back()->getID());
                     dApps->addToIndex();
                     // 3. Create and add the UI card
-                    auto card  = loadedList->back()->createCard(hospital.appoinments, hospital.patients, hospital.doctors, contextFlag);
+                    auto card  = loadedList->back()->createCard(hospital.appoinments, hospital.patients, hospital.doctors);
                     cards->addChild(card);
                     card->setLocalPosition(COORD{ 0, static_cast<SHORT>((loadedList->size()-1) * 12)});
                     std::shared_ptr<NodeButton> finalizeAppointment = std::make_shared<NodeButton>("finalizeAppointment", COORD{43,8}, Color::BRIGHT_WHITE, Color::BRIGHT_GREEN, std::vector<std::string>{

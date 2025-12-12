@@ -11,7 +11,7 @@
 int main(){
     hos::Hospital hospital("Hospital");
     hospital.setName("EL HOSPITAL ADIOS MUNDO");
-    hospital.setAddres("Av Code con calle Embarcadero");
+    hospital.setAddress("Av Code con calle embarcadero");
     hospital.setPhone("04121122333");
 
     SceneManager::getInstance().changeScene(hos::createMenu(hospital));
